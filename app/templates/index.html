@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% block content %}
+<!-- Hero Section -->
+<div class="hero-section bg-primary text-white py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">Найдите работу мечты</h1>
+                <p class="lead mb-4">Агрегатор вакансий с ведущих площадок в одном месте. Быстрый поиск, удобная
+                    фильтрация и актуальные предложения.</p>
+                <a href="{{ url_for('main.vacancies') }}" class="btn btn-light btn-lg px-4 me-2">
+                    <i class="fas fa-search me-2"></i>Найти вакансии
+                </a>
+            </div>
+            <div class="col-lg-6 d-none d-lg-block">
+                <img src="{{ url_for('static', filename='img/hero-image.svg') }}" alt="Поиск работы" class="img-fluid">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="container py-5">
+    <h2 class="text-center mb-5">Почему стоит использовать наш сервис</h2>
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-search fa-3x text-primary mb-3"></i>
+                    <h3 class="h5">Умный поиск</h3>
+                    <p class="text-muted">Поиск по ключевым словам, местоположению, компании и зарплате</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-sync fa-3x text-primary mb-3"></i>
+                    <h3 class="h5">Актуальные данные</h3>
+                    <p class="text-muted">Регулярное обновление базы вакансий с популярных площадок</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <i class="fas fa-filter fa-3x text-primary mb-3"></i>
+                    <h3 class="h5">Удобная фильтрация</h3>
+                    <p class="text-muted">Гибкие фильтры для быстрого поиска подходящих вакансий</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Section -->
+<div class="bg-light py-5">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-md-4">
+                <div class="display-4 fw-bold text-primary mb-2">{{ stats.total_vacancies }}</div>
+                <p class="text-muted">Вакансий в базе</p>
+            </div>
+            <div class="col-md-4">
+                <div class="display-4 fw-bold text-primary mb-2">{{ stats.sources_count }}</div>
+                <p class="text-muted">Источников вакансий</p>
+            </div>
+            <div class="col-md-4">
+                <div class="display-4 fw-bold text-primary mb-2">{{ stats.cities_count }}</div>
+                <p class="text-muted">Городов</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- How It Works Section -->
+<div class="container py-5">
+    <h2 class="text-center mb-5">Как это работает</h2>
+    <div class="row g-4">
+        <div class="col-md-3">
+            <div class="text-center">
+                <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-3"
+                    style="width: 60px; height: 60px;">
+                    <i class="fas fa-search fa-2x"></i>
+                </div>
+                <h4 class="h5">1. Поиск</h4>
+                <p class="text-muted">Введите ключевые слова и параметры поиска</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="text-center">
+                <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-3"
+                    style="width: 60px; height: 60px;">
+                    <i class="fas fa-filter fa-2x"></i>
+                </div>
+                <h4 class="h5">2. Фильтрация</h4>
+                <p class="text-muted">Отфильтруйте результаты по нужным критериям</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="text-center">
+                <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-3"
+                    style="width: 60px; height: 60px;">
+                    <i class="fas fa-list fa-2x"></i>
+                </div>
+                <h4 class="h5">3. Просмотр</h4>
+                <p class="text-muted">Изучите подробную информацию о вакансиях</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="text-center">
+                <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-3"
+                    style="width: 60px; height: 60px;">
+                    <i class="fas fa-check fa-2x"></i>
+                </div>
+                <h4 class="h5">4. Выбор</h4>
+                <p class="text-muted">Выберите подходящие вакансии и откликайтесь</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Call to Action -->
+<div class="bg-primary text-white py-5">
+    <div class="container text-center">
+        <h2 class="mb-4">Начните поиск прямо сейчас</h2>
+        <a href="{{ url_for('main.vacancies') }}" class="btn btn-light btn-lg px-4">
+            <i class="fas fa-search me-2"></i>Найти вакансии
+        </a>
+    </div>
+</div>
+{% endblock %}

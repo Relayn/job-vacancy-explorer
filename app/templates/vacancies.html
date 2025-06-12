@@ -1,0 +1,290 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <h2 class="text-center my-4">Поиск вакансий</h2>
+
+    <!-- Отображение ошибок -->
+    {% if error %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>Ошибка!</strong> {{ error }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endif %}
+
+    <!-- Форма поиска и фильтрации -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header">
+            <h5 class="mb-0">Фильтры поиска</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('main.vacancies') }}" class="row g-3">
+                <div class="col-md-6">
+                    <label for="query" class="form-label">Ключевые слова</label>
+                    <input type="text" id="query" name="query" value="{{ query }}" class="form-control"
+                        placeholder="Например: Python, Java, Frontend...">
+                </div>
+                <div class="col-md-6">
+                    <label for="location" class="form-label">Местоположение</label>
+                    <input type="text" id="location" name="location" value="{{ location }}" class="form-control"
+                        placeholder="Например: Москва, Санкт-Петербург...">
+                </div>
+                <div class="col-md-4">
+                    <label for="company" class="form-label">Компания</label>
+                    <input type="text" id="company" name="company" value="{{ company }}" class="form-control"
+                        placeholder="Название компании">
+                </div>
+                <div class="col-md-3">
+                    <label for="salary_min" class="form-label">Минимальная зарплата</label>
+                    <input type="number" id="salary_min" name="salary_min" value="{{ salary_min }}" class="form-control"
+                        placeholder="От">
+                </div>
+                <div class="col-md-3">
+                    <label for="salary_max" class="form-label">Максимальная зарплата</label>
+                    <input type="number" id="salary_max" name="salary_max" value="{{ salary_max }}" class="form-control"
+                        placeholder="До">
+                </div>
+                <div class="col-md-2">
+                    <label for="per_page" class="form-label">Вакансий на странице</label>
+                    <select id="per_page" name="per_page" class="form-select">
+                        <option value="20" {% if per_page==20 %}selected{% endif %}>20</option>
+                        <option value="50" {% if per_page==50 %}selected{% endif %}>50</option>
+                        <option value="100" {% if per_page==100 %}selected{% endif %}>100</option>
+                    </select>
+                </div>
+                <div class="col-12 text-center mt-3">
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="fas fa-search me-2"></i>Найти вакансии
+                    </button>
+                    <a href="{{ url_for('main.vacancies') }}" class="btn btn-outline-secondary ms-2">Сбросить
+                        фильтры</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Результаты поиска -->
+    {% if vacancies|length == 0 %}
+    <div class="alert alert-info shadow-sm">
+        <i class="fas fa-info-circle me-2"></i>
+        Нет найденных вакансий по вашему запросу. Попробуйте изменить параметры поиска.
+    </div>
+    {% else %}
+    <!-- Информация о результатах -->
+    <div class="alert alert-light border shadow-sm mb-4">
+        <div class="row align-items-center">
+            <div class="col">
+                <strong>Найдено:</strong> {{ total_vacancies }} вакансий
+                {% if query or location or company or salary_min or salary_max %}
+                по запросу
+                {% if query %}<span class="badge bg-primary">{{ query }}</span>{% endif %}
+                {% if location %}<span class="badge bg-info">{{ location }}</span>{% endif %}
+                {% if company %}<span class="badge bg-secondary">{{ company }}</span>{% endif %}
+                {% if salary_min %}<span class="badge bg-success">от {{ salary_min }} ₽</span>{% endif %}
+                {% if salary_max %}<span class="badge bg-danger">до {{ salary_max }} ₽</span>{% endif %}
+                {% endif %}
+            </div>
+            <div class="col-auto">
+                <div class="btn-group" role="group" aria-label="Сортировка">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled>Сортировка:</button>
+                    <a href="{{ url_for('main.vacancies', query=query, location=location, company=company, salary_min=salary_min, salary_max=salary_max, per_page=per_page, sort='date') }}"
+                        class="btn btn-sm btn-outline-primary {% if sort == 'date' %}active{% endif %}">
+                        По дате
+                    </a>
+                    <a href="{{ url_for('main.vacancies', query=query, location=location, company=company, salary_min=salary_min, salary_max=salary_max, per_page=per_page, sort='salary') }}"
+                        class="btn btn-sm btn-outline-primary {% if sort == 'salary' %}active{% endif %}">
+                        По зарплате
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Список вакансий -->
+    <div class="vacancies-list">
+        {% for vacancy in vacancies %}
+        <div class="card vacancy-card mb-3 shadow-sm" id="vacancy-{{ vacancy.id }}">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-9">
+                        <h4 class="card-title">{{ vacancy.title|e }}</h4>
+                        <h6 class="card-subtitle mb-2">{{ vacancy.company|e }}</h6>
+
+                        <div class="vacancy-details mt-3">
+                            <p class="mb-2">
+                                <i class="fas fa-map-marker-alt text-danger me-2"></i>
+                                {{ vacancy.location|e }}
+                            </p>
+
+                            {% if vacancy.salary %}
+                            <p class="mb-2">
+                                <i class="fas fa-money-bill-wave text-success me-2"></i>
+                                <strong>{{ vacancy.salary|e }}</strong>
+                            </p>
+                            {% else %}
+                            <p class="mb-2 text-muted">
+                                <i class="fas fa-money-bill-wave me-2"></i>
+                                Зарплата не указана
+                            </p>
+                            {% endif %}
+
+                            <p class="mb-2">
+                                <i class="fas fa-calendar-alt text-primary me-2"></i>
+                                <small>Опубликовано: {{ vacancy.published_at|e }}</small>
+                            </p>
+
+                            <p class="mb-0">
+                                <span class="badge bg-secondary">{{ vacancy.source|e }}</span>
+                            </p>
+                            <!-- Новая ссылка на оригинал вакансии -->
+                            <p class="mt-2">
+                                {% if vacancy.original_url and (vacancy.original_url.startswith('http://') or
+                                vacancy.original_url.startswith('https://')) %}
+                                <a href="{{ vacancy.original_url }}" target="_blank" rel="noopener noreferrer">Открыть
+                                    оригинал</a>
+                                {% else %}
+                                <span class="text-muted">Ссылка на оригинал недоступна</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3 text-end d-flex flex-column justify-content-between">
+                        <button class="btn btn-outline-primary mt-2 mt-md-0" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#collapse-{{ vacancy.id }}" aria-expanded="false"
+                            aria-controls="collapse-{{ vacancy.id }}">
+                            <i class="fas fa-info-circle me-1"></i> Подробнее
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Скрытое описание вакансии -->
+                <div class="collapse mt-3" id="collapse-{{ vacancy.id }}">
+                    <div class="card card-body bg-light">
+                        {% if vacancy.description %}
+                        <h5>Описание вакансии:</h5>
+                        <div class="vacancy-description">
+                            {{ vacancy.description|e|nl2br }}
+                        </div>
+                        {% else %}
+                        <p class="text-muted">Описание отсутствует. Подробности можно узнать на сайте работодателя.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Пагинация -->
+    {% if total_pages > 1 %}
+    <nav aria-label="Навигация по страницам" class="my-4">
+        <div class="pagination-info text-center mb-2">
+            Страница {{ page }} из {{ total_pages }}
+            (всего {{ total_vacancies }} вакансий)
+        </div>
+        <ul class="pagination justify-content-center">
+            <!-- Первая страница -->
+            <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                <a class="page-link"
+                    href="{{ url_for('main.vacancies', page=1, query=query, location=location, company=company, salary_min=salary_min, salary_max=salary_max, per_page=per_page, sort=sort) }}">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+
+            <!-- Предыдущая страница -->
+            <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                <a class="page-link"
+                    href="{{ url_for('main.vacancies', page=page-1, query=query, location=location, company=company, salary_min=salary_min, salary_max=salary_max, per_page=per_page, sort=sort) }}">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+
+            <!-- Номера страниц -->
+            {% set start = [1, page - 2]|max %}
+            {% set end = [start + 4, total_pages]|min %}
+            {% set start = [end - 4, 1]|max %}
+
+            {% if start > 1 %}
+            <li class="page-item disabled">
+                <span class="page-link">...</span>
+            </li>
+            {% endif %}
+
+            {% for p in range(start, end + 1) %}
+            <li class="page-item {% if p == page %}active{% endif %}">
+                <a class="page-link"
+                    href="{{ url_for('main.vacancies', page=p, query=query, location=location, company=company, salary_min=salary_min, salary_max=salary_max, per_page=per_page, sort=sort) }}">
+                    {{ p }}
+                </a>
+            </li>
+            {% endfor %}
+
+            {% if end < total_pages %} <li class="page-item disabled">
+                <span class="page-link">...</span>
+                </li>
+                {% endif %}
+
+                <!-- Следующая страница -->
+                <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                    <a class="page-link"
+                        href="{{ url_for('main.vacancies', page=page+1, query=query, location=location, company=company, salary_min=salary_min, salary_max=salary_max, per_page=per_page, sort=sort) }}">
+                        <i class="fas fa-angle-right"></i>
+                    </a>
+                </li>
+
+                <!-- Последняя страница -->
+                <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                    <a class="page-link"
+                        href="{{ url_for('main.vacancies', page=total_pages, query=query, location=location, company=company, salary_min=salary_min, salary_max=salary_max, per_page=per_page, sort=sort) }}">
+                        <i class="fas fa-angle-double-right"></i>
+                    </a>
+                </li>
+        </ul>
+    </nav>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    // Добавляем фильтрацию по мере ввода в поля поиска
+    document.addEventListener('DOMContentLoaded', function () {
+        // Добавляем функцию отложенного выполнения для полей поиска
+        function debounce(func, delay) {
+            let timeout;
+            return function () {
+                const context = this;
+                const args = arguments;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(context, args), delay);
+            };
+        }
+
+        // Автоматическое применение фильтров после паузы в вводе
+        const searchInputs = document.querySelectorAll('form input, form select');
+        searchInputs.forEach(input => {
+            input.addEventListener('change', debounce(function () {
+                document.querySelector('form').submit();
+            }, 500));
+        });
+
+        // Подсветка текста поиска в заголовках вакансий
+        if ('{{ query }}') {
+            const query = '{{ query }}'.toLowerCase();
+            const titles = document.querySelectorAll('.card-title');
+
+            titles.forEach(title => {
+                if (title.textContent.toLowerCase().includes(query)) {
+                    const regex = new RegExp(query, 'gi');
+                    title.innerHTML = title.textContent.replace(
+                        regex,
+                        match => `<mark>${match}</mark>`
+                    );
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

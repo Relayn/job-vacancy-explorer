@@ -1,0 +1,139 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: #f8f9fa;
+}
+
+header {
+    background: #222;
+    color: #fff;
+    padding: 10px 0;
+}
+
+nav a {
+    color: #fff;
+    margin: 0 10px;
+    text-decoration: none;
+}
+
+nav a:hover {
+    text-decoration: underline;
+}
+
+main {
+    padding: 20px;
+}
+
+footer {
+    background: #eee;
+    color: #444;
+    text-align: center;
+    padding: 10px 0;
+    position: fixed;
+    width: 100%;
+    bottom: 0;
+}
+
+h1,
+h2 {
+    color: #222;
+}
+
+/* Стили для блока пагинации */
+.pagination {
+    margin-top: 30px;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.pagination-info {
+    margin-bottom: 15px;
+    color: #666;
+}
+
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    align-items: center;
+}
+
+.page-current {
+    font-weight: bold;
+}
+
+/* Custom styling for vacancy cards */
+.vacancy-card {
+    transition: transform 0.2s ease-in-out;
+    border: none;
+    border-left: 4px solid #0d6efd;
+}
+
+.vacancy-card:hover {
+    transform: translateX(5px);
+    box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15) !important;
+}
+
+.vacancy-card .card-title {
+    color: #0d6efd;
+    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+}
+
+.vacancy-card .card-subtitle {
+    font-size: 1rem;
+    color: #6c757d;
+}
+
+.vacancy-details {
+    font-size: 0.95rem;
+}
+
+.vacancy-description {
+    white-space: pre-line;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #212529;
+}
+
+/* Pagination styling */
+.pagination-info {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.page-link {
+    color: #0d6efd;
+    border-radius: 0;
+}
+
+.page-item.active .page-link {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+/* Filter card styling */
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, .125);
+}
+
+/* Badge styling */
+.badge {
+    font-weight: 500;
+    padding: 0.5em 0.75em;
+    margin: 0 0.2em;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .vacancy-card .col-md-3 {
+        margin-top: 1rem;
+        text-align: left !important;
+    }
+
+    .vacancy-card .btn {
+        width: 100%;
+    }
+}

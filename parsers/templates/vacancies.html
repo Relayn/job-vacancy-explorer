@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <title>Список вакансий</title>
+    <style>
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>Последние вакансии</h1>
+    <table>
+        <tr>
+            <th>Название</th>
+            <th>Компания</th>
+            <th>Зарплата</th>
+            <th>Дата</th>
+        </tr>
+        {% for vacancy in vacancies %}
+        <tr>
+            <td>{{ vacancy['title'] }}</td>
+            <td>{{ vacancy['company'] }}</td>
+            <td>{{ vacancy['salary'] or 'Не указана' }}</td>
+            <td>{{ vacancy['published_at'] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
