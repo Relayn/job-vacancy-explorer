@@ -7,7 +7,7 @@
 
 1.  **Клонируйте репозиторий:**
     ```bash
-    git clone https://github.com/Dema267/job-vacancy-explorer.git
+    git clone https://github.com/Relayn/job-vacancy-explorer.git
     cd job-vacancy-explorer
     ```
 

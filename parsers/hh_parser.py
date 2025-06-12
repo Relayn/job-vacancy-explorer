@@ -81,9 +81,16 @@ class HHAPIParser:
     def _get_vacancy_description(self, item: Dict) -> str:
         """Получение описания вакансии без дополнительного запроса"""
         snippet = item.get("snippet", {})
-        requirement = snippet.get("requirement", "") or snippet.get("requirement", "")
-        responsibility = snippet.get("responsibility", "")
-        return f"{requirement} {responsibility}".strip()
+        requirement = snippet.get("requirement")
+        responsibility = snippet.get("responsibility")
+
+        description_parts = []
+        if requirement:  # Проверяем, что requirement не None и не пустая строка
+            description_parts.append(requirement)
+        if responsibility:  # Проверяем, что responsibility не None и не пустая строка
+            description_parts.append(responsibility)
+
+        return " ".join(description_parts).strip()
 
     def _save_vacancy(self, vacancy: Vacancy):
         """Сохранение вакансии в БД"""

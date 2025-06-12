@@ -37,29 +37,53 @@ def filter_vacancies(
 
         # Проверка на соответствие зарплате (если она указана)
         matches_salary = True
-        if vacancy["salary"] and (salary_min or salary_max):
-            try:
-                # Парсим зарплату из строки
-                salary_text = vacancy["salary"].lower()
-                # Удаляем нечисловые символы и разделяем на части
-                import re
+        if (
+            salary_min or salary_max
+        ):  # Применяем фильтр по зарплате только если min или max указаны
+            if not vacancy["salary"] or "без указания" in vacancy["salary"].lower():
+                matches_salary = False
+            else:
+                try:
+                    salary_text = vacancy["salary"].lower()
+                    import re
 
-                salary_numbers = [int(s) for s in re.findall(r"\b\d+\b", salary_text)]
+                    numbers = [int(s) for s in re.findall(r"\\b\\d+\\b", salary_text)]
 
-                if salary_numbers:
-                    # Если указана минимальная зарплата и она больше максимальной в вакансии
-                    if salary_min and int(salary_min) > max(salary_numbers):
+                    vacancy_min_salary = None
+                    vacancy_max_salary = None
+
+                    if "от" in salary_text and numbers:
+                        vacancy_min_salary = numbers[0]
+                        if len(numbers) > 1 and "до" in salary_text:
+                            vacancy_max_salary = numbers[1]
+                        else:
+                            vacancy_max_salary = float("inf")
+                    elif "до" in salary_text and numbers:
+                        vacancy_max_salary = numbers[0]
+                        vacancy_min_salary = 0
+                    elif numbers:
+                        if len(numbers) == 1:
+                            vacancy_min_salary = numbers[0]
+                            vacancy_max_salary = numbers[0]
+                        elif len(numbers) == 2:
+                            vacancy_min_salary = min(numbers)
+                            vacancy_max_salary = max(numbers)
+
+                    if (
+                        vacancy_min_salary is not None
+                        and vacancy_max_salary is not None
+                    ):
+                        if salary_min:
+                            filter_min = int(salary_min)
+                            if filter_min > vacancy_max_salary:
+                                matches_salary = False
+                        if salary_max and matches_salary:
+                            filter_max = int(salary_max)
+                            if filter_max < vacancy_min_salary:
+                                matches_salary = False
+                    else:
                         matches_salary = False
-
-                    # Если указана максимальная зарплата и она меньше минимальной в вакансии
-                    if salary_max and int(salary_max) < min(salary_numbers):
-                        matches_salary = False
-                elif salary_min or salary_max:
-                    # Если в зарплате нет чисел, но указан фильтр по зарплате, считаем несоответствие
-                    matches_salary = False
-            except (ValueError, TypeError):
-                # В случае ошибки при парсинге зарплаты и наличия фильтра, считаем несоответствие
-                if salary_min or salary_max:
+                except (ValueError, TypeError):
                     matches_salary = False
 
         # Если вакансия соответствует всем критериям, добавляем её в отфильтрованный список
