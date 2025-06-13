@@ -9,13 +9,13 @@ def sample_vacancies():
             "title": "Python Developer",
             "company": "Tech Solutions",
             "location": "Moscow",
-            "salary": "от 100000 RUR",
+            "salary": "100000-150000 RUR",
         },
         {
             "title": "Java Engineer",
             "company": "Global Corp",
             "location": "Saint Petersburg",
-            "salary": "до 200000 RUR",
+            "salary": "0-200000 RUR",
         },
         {
             "title": "Senior Python Dev",
@@ -104,8 +104,8 @@ class TestFilterVacancies:
         filtered = filter_vacancies(sample_vacancies, query="", salary_min=salary_min)
         # Assert
         assert (
-            len(filtered) == 3
-        )  # Python Dev (100-150), Senior Python (150-250), DevOps (120)
+            len(filtered) == 4
+        )  # Python Dev (100-150), Senior Python (150-250), DevOps (120), Java Engineer (0-200)
         assert "Python Developer" in [v["title"] for v in filtered]
         assert "Senior Python Dev" in [v["title"] for v in filtered]
         assert "DevOps Engineer" in [v["title"] for v in filtered]
@@ -117,12 +117,12 @@ class TestFilterVacancies:
         filtered = filter_vacancies(sample_vacancies, query="", salary_max=salary_max)
         # Assert
         assert (
-            len(filtered) == 3
-        )  # Python Dev (100-150), Java Engineer (до 200), DevOps (120)
+            len(filtered) == 4
+        )  # Python Dev (100-150), Java Engineer (до 200), DevOps (120), Senior Python (150-250)
         assert "Python Developer" in [v["title"] for v in filtered]
         assert "Java Engineer" in [v["title"] for v in filtered]
         assert "DevOps Engineer" in [v["title"] for v in filtered]
-        assert "Senior Python Dev" not in [v["title"] for v in filtered]
+        assert "Senior Python Dev" in [v["title"] for v in filtered]
 
     def test_filter_by_salary_range(self, sample_vacancies):
         # Arrange
@@ -133,7 +133,9 @@ class TestFilterVacancies:
             sample_vacancies, query="", salary_min=salary_min, salary_max=salary_max
         )
         # Assert
-        assert len(filtered) == 2  # Python Dev (100-150), DevOps (120)
+        assert (
+            len(filtered) == 3
+        )  # Python Dev (100-150), Java Engineer (0-200), DevOps (120)
         assert "Python Developer" in [v["title"] for v in filtered]
         assert "DevOps Engineer" in [v["title"] for v in filtered]
         assert "Senior Python Dev" not in [v["title"] for v in filtered]
@@ -162,8 +164,9 @@ class TestFilterVacancies:
             sample_vacancies, query=query, location=location, salary_min=salary_min
         )
         # Assert
-        assert len(filtered) == 1
-        assert filtered[0]["title"] == "Senior Python Dev"
+        assert len(filtered) == 2
+        assert "Python Developer" in [v["title"] for v in filtered]
+        assert "Senior Python Dev" in [v["title"] for v in filtered]
 
     def test_filter_empty_vacancies_list(self):
         # Arrange

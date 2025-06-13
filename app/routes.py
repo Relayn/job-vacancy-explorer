@@ -5,8 +5,53 @@ from core.database import (
     get_unique_sources,
     get_unique_cities,
 )
+import re
 
 bp = Blueprint("main", __name__)
+
+
+def _parse_salary(salary_str: str) -> tuple[int | None, int | None]:
+    """
+    Parses a salary string and returns a tuple of (min_salary, max_salary).
+    Handles formats like:
+    - "от 100000 RUR" -> (100000, float('inf'))
+    - "до 150000 RUR" -> (0, 150000)
+    - "100000-150000 RUR" -> (100000, 150000)
+    - "120000 RUR" -> (120000, 120000)
+    - "без указания" or empty string -> (None, None)
+    """
+    if not salary_str or "без указания" in salary_str.lower():
+        return None, None
+
+    # Normalize the string: remove spaces, convert to lowercase, remove currency/units
+    # Keep 'от' and 'до' for logic, then remove after checking their presence
+    normalized_salary = salary_str.lower().replace(" ", "")
+
+    numbers = [int(s) for s in re.findall(r"\d+", normalized_salary)]
+
+    min_salary = None
+    max_salary = None
+
+    if "от" in normalized_salary and "до" in normalized_salary:
+        if len(numbers) >= 2:
+            min_salary = min(numbers)
+            max_salary = max(numbers)
+    elif "от" in normalized_salary:
+        if numbers:
+            min_salary = numbers[0]
+            max_salary = float("inf")  # Open-ended max
+    elif "до" in normalized_salary:
+        if numbers:
+            max_salary = numbers[0]
+            min_salary = 0  # Open-ended min
+    elif len(numbers) == 1:
+        min_salary = numbers[0]
+        max_salary = numbers[0]
+    elif len(numbers) >= 2:  # For ranges like "100000-150000" without 'от'/'до'
+        min_salary = min(numbers)
+        max_salary = max(numbers)
+
+    return min_salary, max_salary
 
 
 def filter_vacancies(
@@ -37,52 +82,46 @@ def filter_vacancies(
 
         # Проверка на соответствие зарплате (если она указана)
         matches_salary = True
-        if (
-            salary_min or salary_max
-        ):  # Применяем фильтр по зарплате только если min или max указаны
-            if not vacancy["salary"] or "без указания" in vacancy["salary"].lower():
-                matches_salary = False
+        if salary_min or salary_max:
+            parsed_min_salary, parsed_max_salary = _parse_salary(
+                vacancy.get("salary", "")
+            )
+
+            if parsed_min_salary is None and parsed_max_salary is None:
+                matches_salary = False  # No valid salary range could be parsed
             else:
                 try:
-                    salary_text = vacancy["salary"].lower()
-                    import re
+                    # Convert filter values to integers, None if empty
+                    filter_min = int(salary_min) if salary_min else None
+                    filter_max = int(salary_max) if salary_max else None
 
-                    numbers = [int(s) for s in re.findall(r"\\b\\d+\\b", salary_text)]
+                    # Use -inf and +inf for open-ended ranges for easier comparison
+                    vac_min_comp = (
+                        parsed_min_salary
+                        if parsed_min_salary is not None
+                        else -float("inf")
+                    )
+                    vac_max_comp = (
+                        parsed_max_salary
+                        if parsed_max_salary is not None
+                        else float("inf")
+                    )
 
-                    vacancy_min_salary = None
-                    vacancy_max_salary = None
+                    fil_min_comp = (
+                        filter_min if filter_min is not None else -float("inf")
+                    )
+                    fil_max_comp = (
+                        filter_max if filter_max is not None else float("inf")
+                    )
 
-                    if "от" in salary_text and numbers:
-                        vacancy_min_salary = numbers[0]
-                        if len(numbers) > 1 and "до" in salary_text:
-                            vacancy_max_salary = numbers[1]
-                        else:
-                            vacancy_max_salary = float("inf")
-                    elif "до" in salary_text and numbers:
-                        vacancy_max_salary = numbers[0]
-                        vacancy_min_salary = 0
-                    elif numbers:
-                        if len(numbers) == 1:
-                            vacancy_min_salary = numbers[0]
-                            vacancy_max_salary = numbers[0]
-                        elif len(numbers) == 2:
-                            vacancy_min_salary = min(numbers)
-                            vacancy_max_salary = max(numbers)
-
-                    if (
-                        vacancy_min_salary is not None
-                        and vacancy_max_salary is not None
+                    # Check for overlap: max(start1, start2) <= min(end1, end2)
+                    # For interval [A, B] and [C, D], they overlap if max(A, C) <= min(B, D)
+                    if not (
+                        max(vac_min_comp, fil_min_comp)
+                        <= min(vac_max_comp, fil_max_comp)
                     ):
-                        if salary_min:
-                            filter_min = int(salary_min)
-                            if filter_min > vacancy_max_salary:
-                                matches_salary = False
-                        if salary_max and matches_salary:
-                            filter_max = int(salary_max)
-                            if filter_max < vacancy_min_salary:
-                                matches_salary = False
-                    else:
                         matches_salary = False
+
                 except (ValueError, TypeError):
                     matches_salary = False
 

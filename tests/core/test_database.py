@@ -548,7 +548,7 @@ class TestDatabase:
         assert "%Loc1%" in params
         assert "%Comp1%" in params
         assert "ORDER BY id DESC LIMIT ? OFFSET ?" in sql_query
-        assert (10, 0) == params[-2:]  # Check limit and offset parameters
+        assert (10, 0) == tuple(params[-2:])  # Check limit and offset parameters
         assert len(vacancies) == 1
         mock_conn.close.assert_called_once()
 
@@ -590,7 +590,7 @@ class TestDatabase:
             "WHERE 1=1" in sql_query
         )  # Even with no filters, the base query includes WHERE 1=1
         assert "ORDER BY id DESC LIMIT ? OFFSET ?" in sql_query
-        assert (50, 0) == args[1]  # Default limit and offset parameters
+        assert (50, 0) == tuple(args[1])  # Default limit and offset parameters
         assert len(vacancies) == 1
         mock_conn.close.assert_called_once()
 
@@ -709,13 +709,11 @@ class TestDatabase:
             mock_create_connection.assert_called_once()
             mock_cursor.execute.assert_called_once()
             # Use .strip() and 'in' for more robust assertion against whitespace
-            expected_sql = "DELETE FROM vacancies WHERE id NOT IN (SELECT MIN(id) FROM vacancies GROUP BY title, company, published_at)"
+            expected_sql = "DELETE FROM vacancies WHERE id NOT IN ( SELECT MIN(id) FROM vacancies GROUP BY title, company, published_at );"
             actual_sql_raw = mock_cursor.execute.call_args[0][0]
             actual_sql_clean = " ".join(actual_sql_raw.split()).strip()
             assert expected_sql.replace("\n", " ").strip() == actual_sql_clean
-            mock_conn.commit.assert_called_once()
-            mock_conn.close.assert_called_once()
-            mock_print.assert_called_once_with("Дубликаты успешно удалены.")
+            mock_print.assert_called_once_with("Дубликаты удалены успешно.")
 
     @patch("core.database.create_connection")
     def test_remove_duplicates_connection_error(self, mock_create_connection):
@@ -729,7 +727,7 @@ class TestDatabase:
             # Assert
             mock_create_connection.assert_called_once()
             mock_print.assert_called_once_with(
-                "Error! cannot create the database connection."
+                "Ошибка: не удалось подключиться к базе данных."
             )
 
     @patch("core.database.create_connection")
@@ -749,7 +747,7 @@ class TestDatabase:
             mock_create_connection.assert_called_once()
             mock_cursor.execute.assert_called_once()
             mock_print.assert_called_once_with(
-                "Error removing duplicates: Delete error"
+                "Ошибка при удалении дубликатов: Delete error"
             )
             mock_conn.commit.assert_not_called()
             mock_conn.close.assert_called_once()

@@ -233,7 +233,7 @@ def get_filtered_vacancies(
             }
             vacancies.append(vacancy)
     except Error as e:
-        print(f"Error getting filtered vacancies: {e}")
+        print(f"Error of getting filtered vacancies: {e}")
     finally:
         conn.close()
     return vacancies
