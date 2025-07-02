@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "job-vacancy-explorer"
+version = "0.1.0"
+description = "Web application for aggregating, searching and filtering job vacancies."
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.11"
+flask = "^3.0.3"
+requests = "^2.32.3"
+apscheduler = "^3.10.4"
+python-dotenv = "^1.0.1"
+gunicorn = "23.0.0"
+psycopg = { version = "^3.1.19", extras = ["binary"] }
+pydantic = "^2.8.2"
+pydantic-settings = "^2.3.4"
+sqlalchemy = "^2.0.31"
+alembic = "^1.13.1"
+markupsafe = "^2.1.5"
+tzlocal = "^5.2"
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.5.5"
+black = "^24.8.0"
+pytest = "^8.3.2"
+pre-commit = "^4.2.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
