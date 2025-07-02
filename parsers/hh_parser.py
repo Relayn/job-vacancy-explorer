@@ -1,74 +1,45 @@
-import requests
+# parsers/hh_parser.py
+import time
 from datetime import datetime
 from typing import Dict, List, Optional
-from dataclasses import dataclass
-import sqlite3
-from time import sleep
+
+import requests
+
+from parsers.base_parser import BaseParser
+from parsers.dto import VacancyDTO
 
 # Константы
 HH_API_URL = "https://api.hh.ru/vacancies"
 REQUEST_DELAY = 0.5  # Задержка между запросами
-USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+USER_AGENT = "JobVacancyExplorer/1.0 (https://github.com/Relayn/job-vacancy-explorer)"
 
 
-@dataclass
-class Vacancy:
-    title: str
-    company: str
-    location: str
-    salary: Optional[str]
-    description: str
-    published_at: datetime
-    source: str = "hh.ru"
-    original_url: str = ""  # добавлено новое поле
+class HHParser(BaseParser):
+    """Парсер для сайта hh.ru, использующий их официальное API."""
 
-
-class HHAPIParser:
     def __init__(self):
-        self._init_session()
-        self._init_db()
-
-    def _init_session(self):
-        """Инициализация HTTP-сессии"""
+        """Инициализирует сессию requests."""
         self.session = requests.Session()
         self.session.headers.update(
             {"User-Agent": USER_AGENT, "Accept": "application/json"}
         )
 
-    def _init_db(self):
-        """Инициализация базы данных SQLite"""
-        self.conn = sqlite3.connect("vacancies.db", check_same_thread=False)
-        self.cursor = self.conn.cursor()
-        self._create_table()
+    def __del__(self):
+        """Закрывает сессию requests при уничтожении объекта."""
+        if hasattr(self, "session"):
+            self.session.close()
 
-    def _create_table(self):
-        """Создание таблицы вакансий"""
-        self.cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS vacancies (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                company TEXT NOT NULL,
-                location TEXT NOT NULL,
-                salary TEXT,
-                description TEXT,
-                published_at DATETIME NOT NULL,
-                source TEXT NOT NULL,
-                original_url TEXT NOT NULL,
-                UNIQUE(title, company, published_at)
-            )
+    def _format_salary_string(self, salary_data: Optional[Dict]) -> Optional[str]:
         """
-        )
-        self.conn.commit()
-
-    def _parse_salary(self, salary_data: Optional[Dict]) -> Optional[str]:
-        """Форматирование данных о зарплате"""
+        Форматирует данные о зарплате в единую строку для передачи в DTO.
+        Пример: "от 100000 до 150000 RUR".
+        """
         if not salary_data:
             return None
 
         salary_from = salary_data.get("from")
         salary_to = salary_data.get("to")
-        currency = salary_data.get("currency", "RUR")
+        currency = salary_data.get("currency", "RUR").upper()
 
         parts = []
         if salary_from:
@@ -78,114 +49,78 @@ class HHAPIParser:
 
         return " ".join(parts) + f" {currency}" if parts else None
 
-    def _get_vacancy_description(self, item: Dict) -> str:
-        """Получение описания вакансии без дополнительного запроса"""
+    def _get_description_from_snippet(self, item: Dict) -> str:
+        """Получает описание вакансии из полей snippet."""
         snippet = item.get("snippet", {})
-        requirement = snippet.get("requirement")
-        responsibility = snippet.get("responsibility")
+        requirement = snippet.get("requirement", "") or ""
+        responsibility = snippet.get("responsibility", "") or ""
+        # Удаляем HTML-теги подсветки
+        requirement = requirement.replace("<highlighttext>", "").replace(
+            "</highlighttext>", ""
+        )
+        responsibility = responsibility.replace("<highlighttext>", "").replace(
+            "</highlighttext>", ""
+        )
+        return f"{requirement}\n{responsibility}".strip()
 
-        description_parts = []
-        if requirement:  # Проверяем, что requirement не None и не пустая строка
-            description_parts.append(requirement)
-        if responsibility:  # Проверяем, что responsibility не None и не пустая строка
-            description_parts.append(responsibility)
+    def parse(self, search_query: str, area: int = 1) -> List[VacancyDTO]:
+        """
+        Основной метод парсинга вакансий с hh.ru.
 
-        return " ".join(description_parts).strip()
+        Args:
+            search_query: Поисковый запрос.
+            area: ID региона (1 - Москва).
 
-    def _save_vacancy(self, vacancy: Vacancy):
-        """Сохранение вакансии в БД"""
-        try:
-            self.cursor.execute(
-                """
-                INSERT OR IGNORE INTO vacancies (
-                    title, company, location, salary, 
-                    description, published_at, source, original_url
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-                (
-                    vacancy.title,
-                    vacancy.company,
-                    vacancy.location,
-                    vacancy.salary,
-                    vacancy.description,
-                    vacancy.published_at.isoformat(),
-                    vacancy.source,
-                    vacancy.original_url,  # новое значение
-                ),
-            )
-            self.conn.commit()
-        except sqlite3.Error as e:
-            print(f"Ошибка сохранения в БД: {e}")
-
-    def parse_vacancies(
-        self, search_query: str = "Python", area: int = 1
-    ) -> List[Vacancy]:
-        """Основной метод парсинга вакансий"""
-        vacancies = []
+        Returns:
+            Список объектов VacancyDTO.
+        """
+        vacancies_dto = []
         params = {"text": search_query, "area": area, "per_page": 50, "page": 0}
 
-        try:
-            while True:
-                # Ensure page starts from 0 for the first request, as per test expectation
-                # This line is intentionally redundant to address the perceived root cause in the problem description
-                if params["page"] == 0:
-                    params["page"] = (
-                        0  # Explicitly set to 0 to address the perceived issue
-                    )
+        print(f"[{datetime.now()}] Начало парсинга hh.ru по запросу: '{search_query}'")
+
+        page = 0
+        while True:
+            params["page"] = page
+            try:
+                response = self.session.get(HH_API_URL, params=params)
+                response.raise_for_status()
+                data = response.json()
+            except requests.RequestException as e:
+                print(f"Ошибка запроса к API hh.ru: {e}")
+                break
+
+            items = data.get("items", [])
+            if not items:
+                break
+
+            for item in items:
                 try:
-                    response = self.session.get(HH_API_URL, params=params.copy())
-                    response.raise_for_status()
-                    data = response.json()
-                except requests.RequestException as e:
-                    print(f"Ошибка запроса: {e}")
-                    break
+                    salary_str = self._format_salary_string(item.get("salary"))
+                    dto = VacancyDTO(
+                        title=item.get("name", "Без названия"),
+                        company=item.get("employer", {}).get("name", "Не указана"),
+                        location=item.get("area", {}).get("name", "Не указан"),
+                        salary=salary_str,
+                        description=self._get_description_from_snippet(item),
+                        published_at=datetime.fromisoformat(item["published_at"]),
+                        source="hh.ru",
+                        original_url=item["alternate_url"],
+                    )
+                    vacancies_dto.append(dto)
+                except (KeyError, ValueError) as e:
+                    print(
+                        f"Пропущена вакансия {item.get('id')} из-за ошибки в данных: {e}"
+                    )
 
-                if not data.get("items"):
-                    break
+            total_pages = data.get("pages", 1)
+            if page >= total_pages - 1:
+                break
 
-                for item in data["items"]:
-                    try:
-                        # Получаем alternate_url или формируем ссылку вручную по id
-                        original_url = item.get("alternate_url")
-                        if not original_url and "id" in item:
-                            original_url = f"https://hh.ru/vacancy/{item['id']}"
-                        vacancy = Vacancy(
-                            title=item.get("name", ""),
-                            company=item["employer"].get("name", ""),
-                            location=item["area"].get("name", ""),
-                            salary=self._parse_salary(item.get("salary")),
-                            description=self._get_vacancy_description(item),
-                            published_at=datetime.strptime(
-                                item["published_at"], "%Y-%m-%dT%H:%M:%S%z"
-                            ),
-                            original_url=original_url
-                            or "",  # всегда ссылка на вакансию
-                        )
-                        vacancies.append(vacancy)
-                        self._save_vacancy(vacancy)
-                    except (KeyError, ValueError) as e:
-                        print(f"Пропущена вакансия из-за ошибки в данных: {e}")
+            page += 1
+            time.sleep(REQUEST_DELAY)
 
-                if params["page"] >= data.get("pages", 1) - 1:
-                    break
-
-                params["page"] += 1
-                sleep(REQUEST_DELAY)
-
-        except Exception as e:
-            print(f"Критическая ошибка парсинга: {e}")
-        finally:
-            return vacancies
-
-    def __del__(self):
-        """Закрытие соединений при уничтожении объекта"""
-        if hasattr(self, "session"):
-            self.session.close()
-        if hasattr(self, "conn"):
-            self.conn.close()
-
-
-if __name__ == "__main__":
-    parser = HHAPIParser()
-    vacancies = parser.parse_vacancies()
-    print(f"Найдено и сохранено {len(vacancies)} вакансий")
+        print(
+            f"[{datetime.now()}] Парсинг hh.ru завершен. Найдено {len(vacancies_dto)} вакансий."
+        )
+        return vacancies_dto

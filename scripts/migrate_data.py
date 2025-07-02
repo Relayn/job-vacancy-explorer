@@ -4,10 +4,7 @@ import sys
 from datetime import datetime
 from typing import List, Dict, Any
 
-# --- НАЧАЛО ИСПРАВЛЕНИЯ ---
-# Добавляем путь к проекту в самое начало, ДО всех импортов.
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-# --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine

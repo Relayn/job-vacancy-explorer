@@ -18,5 +18,4 @@ venv/
 .env
 .env.*
 !.env.example
-.coverage
-.env
+.env.test

@@ -1,348 +1,199 @@
-import sqlite3
-from sqlite3 import Error
-import os
-from typing import Any
+"""Модуль для взаимодействия с базой данных с использованием SQLAlchemy ORM."""
+
+from contextlib import contextmanager
+from typing import Generator, List, Optional
+
+from sqlalchemy import create_engine, func, or_, select
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.orm import Session, sessionmaker
+
+from core.config import settings
+from core.models import Vacancy
+from parsers.dto import VacancyDTO  # Предполагаем, что DTO будет здесь
+
+# Создаем engine и sessionmaker для всего приложения
+engine = create_engine(settings.database_url, pool_pre_ping=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-def get_db_path():
-    """Возвращает путь к базе данных."""
-    # Получаем абсолютный путь к директории парсеров
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    # Формируем путь к базе данных
-    db_path = os.path.join(base_dir, "..", "parsers", "vacancies.db")
-    return db_path
+@contextmanager
+def get_db() -> Generator[Session, None, None]:
+    """
+    Контекстный менеджер для получения сессии базы данных.
+    Гарантирует, что сессия будет закрыта после использования.
 
-
-def create_connection() -> Any:
-    """Создает соединение с базой данных SQLite."""
-    conn = None
+    Yields:
+        Session: Экземпляр сессии SQLAlchemy.
+    """
+    db = SessionLocal()
     try:
-        conn = sqlite3.connect(
-            get_db_path()
-        )  # Используем правильный путь к базе данных
-        return conn
-    except Error as e:
-        print(
-            f"Error of creating connection: {e}"
-        )  # Выводим сообщение об ошибке в консоль
-    return conn
-
-
-def migrate_add_original_url_column(conn):
-    """Добавляет столбец original_url, если его нет."""
-    try:
-        cursor = conn.cursor()
-        cursor.execute("PRAGMA table_info(vacancies)")
-        columns = [row[1] for row in cursor.fetchall()]
-        if "original_url" not in columns:
-            cursor.execute(
-                "ALTER TABLE vacancies ADD COLUMN original_url TEXT NOT NULL DEFAULT ''"
-            )
-            conn.commit()
-            print("Столбец original_url успешно добавлен.")
-    except Error as e:
-        print(f"Ошибка миграции original_url: {e}")
-
-
-def initialize_database() -> None:
-    """Инициализирует базу данных и создает таблицы."""
-    conn = create_connection()
-    if conn is not None:
-        # Сначала создаём таблицу, если её нет
-        create_table(conn)
-        # Затем добавляем столбец original_url, если его нет
-        migrate_add_original_url_column(conn)
-        conn.close()
-    else:
-        print("Error! cannot create the database connection.")
-
-
-def create_table(conn) -> None:
-    """Создает таблицу для хранения вакансий."""
-    try:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS vacancies (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                company TEXT NOT NULL,
-                location TEXT NOT NULL,
-                salary TEXT,
-                description TEXT,
-                published_at DATETIME NOT NULL,
-                source TEXT NOT NULL,
-                original_url TEXT NOT NULL,
-                UNIQUE(title, company, published_at)
-            )
-            """
-        )
-        conn.commit()
-    except Error as e:
-        print(f"Error of creating table: {e}")
-
-
-def insert_vacancy(vacancy) -> None:
-    """Добавляет вакансию в базу данных."""
-    conn = create_connection()
-    sql = """INSERT OR IGNORE INTO vacancies 
-             (title, company, location, salary, description, published_at, source, original_url)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)"""
-    # Ensure original_url is a full URL
-    original_url = vacancy.original_url
-    if original_url and not original_url.startswith(("http://", "https://")):
-        original_url = "https://" + original_url.lstrip("/")
-    param = (
-        vacancy.title,
-        vacancy.company,
-        vacancy.location,
-        vacancy.salary,
-        vacancy.description,
-        vacancy.published_at.isoformat(),
-        vacancy.source,
-        original_url,
-    )
-    try:
-        cursor = conn.cursor()
-        cursor.execute(sql, param)
-        conn.commit()
-    except Error as e:
-        print(f"Error of inserting vacancy: {e}")
-        # логирование
+        yield db
     finally:
-        conn.close()
+        db.close()
 
 
-def get_all_vacancies(
-    page: int = 1,
-    per_page: int = 10,
-    order_by: str = "id",
-    order_direction: str = "ASC",
-) -> list:
-    """Получает все вакансии из базы данных с поддержкой пагинации."""
-    conn = create_connection()
-    vacancies = []
-    try:
-        cursor = conn.cursor()
-        offset = (page - 1) * per_page
-        cursor.execute(
-            f"SELECT * FROM vacancies ORDER BY {order_by} {order_direction} LIMIT ? OFFSET ?",
-            (per_page, offset),
-        )
-        rows = cursor.fetchall()
-        for row in rows:
-            vacancy = {
-                "id": row[0],
-                "title": row[1],
-                "company": row[2],
-                "location": row[3],
-                "salary": row[4],
-                "description": row[5],
-                "published_at": row[6],
-                "source": row[7],
-                "original_url": row[8],  # новое поле
-            }
-            vacancies.append(vacancy)
-    except Error as e:
-        print(f"Error of getting all vacancies: {e}")
-    finally:
-        conn.close()
-    return vacancies
+def add_vacancies_from_dto(db: Session, vacancies_dto: List[VacancyDTO]) -> int:
+    """
+    Добавляет список вакансий в базу данных из DTO.
+    Использует PostgreSQL-специфичный ON CONFLICT DO NOTHING для игнорирования дубликатов.
 
+    Args:
+        db: Сессия SQLAlchemy.
+        vacancies_dto: Список DTO вакансий.
 
-def search_vacancies(query: str) -> list:
-    """Ищет вакансии по заданному запросу."""
-    conn = create_connection()
-    vacancies = []
-    try:
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT * FROM vacancies WHERE title LIKE ? OR company LIKE ? OR location LIKE ?",
-            ("%" + query + "%", "%" + query + "%", "%" + query + "%"),
-        )
-        rows = cursor.fetchall()
-        for row in rows:
-            vacancy = {
-                "id": row[0],
-                "title": row[1],
-                "company": row[2],
-                "location": row[3],
-                "salary": row[4],
-                "description": row[5],
-                "published_at": row[6],
-                "source": row[7],
-                "original_url": row[8],  # новое поле
-            }
-            vacancies.append(vacancy)
-    except Error as e:
-        print(f"Error of searching vacancies: {e}")
-    finally:
-        conn.close()
-    return vacancies
+    Returns:
+        Количество успешно добавленных (новых) вакансий.
+    """
+    if not vacancies_dto:
+        return 0
+
+    values_to_insert = [dto.model_dump() for dto in vacancies_dto]
+
+    # Используем insert().on_conflict_do_nothing() для эффективной вставки
+    stmt = insert(Vacancy).values(values_to_insert)
+    stmt = stmt.on_conflict_do_nothing(index_elements=["original_url"])
+
+    result = db.execute(stmt)
+    db.commit()
+
+    return result.rowcount
 
 
 def get_filtered_vacancies(
-    query="",
-    location="",
-    company="",
-    page=1,
-    per_page=50,
-    order_by="id",
-    order_direction="DESC",
-) -> list:
+    db: Session,
+    page: int = 1,
+    per_page: int = 20,
+    query: Optional[str] = None,
+    location: Optional[str] = None,
+    company: Optional[str] = None,
+    salary_min: Optional[int] = None,
+    salary_max: Optional[int] = None,
+    source: Optional[str] = None,
+    sort_by: str = "published_at",
+) -> List[Vacancy]:
     """
-    Получает отфильтрованные вакансии из базы данных с поддержкой пагинации.
-    Фильтрация выполняется на уровне SQL запроса для повышения производительности.
+    Получает отфильтрованный и отсортированный список вакансий из БД с пагинацией.
+
+    Args:
+        db: Сессия SQLAlchemy.
+        page: Номер страницы.
+        per_page: Количество элементов на странице.
+        query: Текст для полнотекстового поиска.
+        location: Фильтр по местоположению.
+        company: Фильтр по компании.
+        salary_min: Минимальная зарплата.
+        salary_max: Максимальная зарплата.
+        source: Фильтр по источнику.
+        sort_by: Поле для сортировки ('published_at' или 'salary_max_rub').
+
+    Returns:
+        Список ORM-объектов Vacancy.
     """
-    conn = create_connection()
-    vacancies = []
-    try:
-        cursor = conn.cursor()
-        # Базовый SQL запрос
-        sql = "SELECT id, title, company, location, salary, description, published_at, source, original_url FROM vacancies WHERE 1=1"
-        params = []
-        # Добавляем условия для фильтрации
-        if query:
-            sql += " AND (title LIKE ? OR company LIKE ? OR location LIKE ? OR description LIKE ?)"
-            params.extend(["%" + query + "%"] * 4)
-        if location:
-            sql += " AND location LIKE ?"
-            params.append("%" + location + "%")
-        if company:
-            sql += " AND company LIKE ?"
-            params.append("%" + company + "%")
-        # Добавляем сортировку и пагинацию
-        sql += f" ORDER BY {order_by} {order_direction} LIMIT ? OFFSET ?"
-        offset = (page - 1) * per_page
-        params.extend([per_page, offset])
-        # Выполняем запрос
-        cursor.execute(sql, params)
-        rows = cursor.fetchall()
-        # Преобразуем результаты в список словарей
-        for row in rows:
-            vacancy = {
-                "id": row[0],
-                "title": row[1],
-                "company": row[2],
-                "location": row[3],
-                "salary": row[4],
-                "description": row[5],
-                "published_at": row[6],
-                "source": row[7],
-                "original_url": row[8],  # новое поле
-            }
-            vacancies.append(vacancy)
-    except Error as e:
-        print(f"Error of getting filtered vacancies: {e}")
-    finally:
-        conn.close()
-    return vacancies
+    stmt = select(Vacancy)
+    filters = []
 
-
-def get_total_vacancies_count(query="", location="", company="") -> int:
-    """
-    Возвращает общее количество вакансий, соответствующих заданным фильтрам.
-    Используется для пагинации.
-    """
-    conn = create_connection()
-    count = 0
-
-    try:
-        cursor = conn.cursor()
-
-        # Базовый SQL запрос для подсчета
-        sql = "SELECT COUNT(*) FROM vacancies WHERE 1=1"
-        params = []
-
-        # Добавляем условия для фильтрации
-        if query:
-            sql += " AND (title LIKE ? OR company LIKE ? OR location LIKE ? OR description LIKE ?)"
-            params.extend(["%" + query + "%"] * 4)
-
-        if location:
-            sql += " AND location LIKE ?"
-            params.append("%" + location + "%")
-
-        if company:
-            sql += " AND company LIKE ?"
-            params.append("%" + company + "%")
-
-        # Выполняем запрос
-        cursor.execute(sql, params)
-        count = cursor.fetchone()[0]
-
-    except Error as e:
-        print(f"Error getting total vacancies count: {e}")
-    finally:
-        conn.close()
-
-    return count
-
-
-def remove_duplicates() -> None:
-    """Удаляет повторяющиеся записи из таблицы vacancies."""
-    conn = create_connection()
-    if conn is not None:
-        try:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                DELETE FROM vacancies
-                WHERE id NOT IN (
-                    SELECT MIN(id)
-                    FROM vacancies
-                    GROUP BY title, company, published_at
-                );
-            """
+    if query:
+        search_pattern = f"%{query}%"
+        filters.append(
+            or_(
+                Vacancy.title.ilike(search_pattern),
+                Vacancy.description.ilike(search_pattern),
+                Vacancy.company.ilike(search_pattern),
             )
-            conn.commit()
-            print("Дубликаты удалены успешно.")
-        except Error as e:
-            print(f"Ошибка при удалении дубликатов: {e}")
-        finally:
-            conn.close()
+        )
+    if location:
+        filters.append(Vacancy.location.ilike(f"%{location}%"))
+    if company:
+        filters.append(Vacancy.company.ilike(f"%{company}%"))
+    if source:
+        filters.append(Vacancy.source == source)
+
+    # Фильтрация по зарплате
+    if salary_min is not None:
+        filters.append(Vacancy.salary_max_rub >= salary_min)
+    if salary_max is not None:
+        filters.append(Vacancy.salary_min_rub <= salary_max)
+
+    if filters:
+        stmt = stmt.where(*filters)
+
+    # Сортировка
+    if sort_by == "salary_max_rub":
+        stmt = stmt.order_by(Vacancy.salary_max_rub.desc().nulls_last())
     else:
-        print("Ошибка: не удалось подключиться к базе данных.")
+        stmt = stmt.order_by(Vacancy.published_at.desc())
+
+    # Пагинация
+    offset = (page - 1) * per_page
+    stmt = stmt.offset(offset).limit(per_page)
+
+    result = db.execute(stmt)
+    return result.scalars().all()
 
 
-def get_unique_sources() -> list:
+def get_total_vacancies_count(
+    db: Session,
+    query: Optional[str] = None,
+    location: Optional[str] = None,
+    company: Optional[str] = None,
+    salary_min: Optional[int] = None,
+    salary_max: Optional[int] = None,
+    source: Optional[str] = None,
+) -> int:
+    """
+    Возвращает общее количество вакансий, соответствующих фильтрам.
+
+    Args:
+        db: Сессия SQLAlchemy.
+        (остальные параметры аналогичны get_filtered_vacancies)
+
+    Returns:
+        Общее количество вакансий.
+    """
+    stmt = select(func.count()).select_from(Vacancy)
+    filters = []
+
+    if query:
+        search_pattern = f"%{query}%"
+        filters.append(
+            or_(
+                Vacancy.title.ilike(search_pattern),
+                Vacancy.description.ilike(search_pattern),
+                Vacancy.company.ilike(search_pattern),
+            )
+        )
+    if location:
+        filters.append(Vacancy.location.ilike(f"%{location}%"))
+    if company:
+        filters.append(Vacancy.company.ilike(f"%{company}%"))
+    if source:
+        filters.append(Vacancy.source == source)
+    if salary_min is not None:
+        filters.append(Vacancy.salary_max_rub >= salary_min)
+    if salary_max is not None:
+        filters.append(Vacancy.salary_min_rub <= salary_max)
+
+    if filters:
+        stmt = stmt.where(*filters)
+
+    result = db.execute(stmt)
+    return result.scalar_one()
+
+
+def get_unique_sources(db: Session) -> List[str]:
     """Возвращает список уникальных источников вакансий."""
-    conn = create_connection()
-    sources = []
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT DISTINCT source FROM vacancies")
-        rows = cursor.fetchall()
-        sources = [row[0] for row in rows]
-    except Error as e:
-        print(f"Error getting unique sources: {e}")
-    finally:
-        conn.close()
-    return sources
+    stmt = select(Vacancy.source).distinct().order_by(Vacancy.source)
+    result = db.execute(stmt)
+    return result.scalars().all()
 
 
-def get_unique_cities() -> list:
+def get_unique_cities(db: Session) -> List[str]:
     """Возвращает список уникальных городов из вакансий."""
-    conn = create_connection()
-    cities = []
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT DISTINCT location FROM vacancies")
-        rows = cursor.fetchall()
-        cities = [row[0] for row in rows]
-    except Error as e:
-        print(f"Error getting unique cities: {e}")
-    finally:
-        conn.close()
-    return cities
-
-
-if __name__ == "__main__":
-    # all_vacancies = get_all_vacancies()
-    # searching_vacancies = search_vacancies("Junior")
-    #
-    # for index, vacancy in enumerate(searching_vacancies, start=1):
-    #     if index > 10:
-    #         break
-    #     print(vacancy)
-    remove_duplicates()
+    stmt = (
+        select(Vacancy.location)
+        .distinct()
+        .where(Vacancy.location.isnot(None))
+        .order_by(Vacancy.location)
+    )
+    result = db.execute(stmt)
+    return result.scalars().all()
