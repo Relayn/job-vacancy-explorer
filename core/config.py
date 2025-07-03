@@ -1,4 +1,5 @@
-# core/config.py
+from typing import List, Optional
+
 from pydantic_settings import BaseSettings
 
 
@@ -21,6 +22,9 @@ class Settings(BaseSettings):
     # Настройки Flask
     DEBUG: bool = False
 
+    # Настройки прокси (опционально)
+    PROXY_LIST: Optional[str] = None
+
     @property
     def database_url(self) -> str:
         """
@@ -28,6 +32,16 @@ class Settings(BaseSettings):
         Использует диалект 'psycopg' для psycopg v3.
         """
         return f"postgresql+psycopg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+
+    @property
+    def proxy_list_as_array(self) -> List[str]:
+        """
+        Возвращает список прокси из строки PROXY_LIST.
+        Обрабатывает пустые значения и лишние пробелы.
+        """
+        if not self.PROXY_LIST:
+            return []
+        return [proxy.strip() for proxy in self.PROXY_LIST.split(",") if proxy.strip()]
 
 
 # Создаем единственный экземпляр настроек, который будет использоваться во всем приложении

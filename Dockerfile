@@ -24,10 +24,10 @@ FROM base as builder
 # Копируем файлы для установки зависимостей
 COPY pyproject.toml poetry.lock* ./
 
-# Устанавливаем зависимости, исключая dev-зависимости
+# Устанавливаем только производственные зависимости
+# --only main: Установить только зависимости из основной группы
 # --no-interaction и --no-ansi для чистого вывода в логах
-RUN poetry install --no-dev --no-interaction --no-ansi
-
+RUN poetry install --only main --no-interaction --no-ansi
 
 # Этап 3: Финальный образ
 FROM base

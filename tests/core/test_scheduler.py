@@ -8,8 +8,11 @@ from core.scheduler import update_vacancies
 
 @patch("core.scheduler.get_db")
 @patch("core.scheduler.add_vacancies_from_dto")
+@patch("core.scheduler.SuperJobParser")
 @patch("core.scheduler.HHParser")
-def test_update_vacancies_success(MockHHParser, mock_add_vacancies, mock_get_db):
+def test_update_vacancies_success(
+    MockHHParser, MockSuperJobParser, mock_add_vacancies, mock_get_db
+):
     """
     Тест успешного выполнения задачи обновления вакансий.
     """
@@ -31,6 +34,10 @@ def test_update_vacancies_success(MockHHParser, mock_add_vacancies, mock_get_db)
         )
     ]
     mock_parser_instance.parse.return_value = mock_dto_list
+
+    # Настраиваем мок для SuperJobParser, чтобы он возвращал пустой список
+    mock_superjob_instance = MockSuperJobParser.return_value
+    mock_superjob_instance.parse.return_value = []
 
     # 2. Настраиваем мок функции добавления в БД
     mock_add_vacancies.return_value = len(mock_dto_list)

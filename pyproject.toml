@@ -20,7 +20,8 @@ sqlalchemy = "^2.0.31"
 alembic = "^1.13.1"
 markupsafe = "^2.1.5"
 tzlocal = "^5.2"
-
+beautifulsoup4 = "^4.13.4"
+lxml = "^6.0.0"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.5.5"
