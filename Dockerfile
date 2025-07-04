@@ -33,7 +33,10 @@ RUN poetry install --only main --no-interaction --no-ansi
 FROM base
 
 # Копируем установленные зависимости из builder
+# 1. Копируем библиотеки
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+# 2. Копируем исполняемые файлы (gunicorn, alembic, etc.)
+COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder /app /app
 
 # Копируем исходный код приложения

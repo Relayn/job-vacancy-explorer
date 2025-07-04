@@ -18,29 +18,38 @@
         </div>
         <div class="card-body">
             <form method="GET" action="{{ url_for('main.vacancies') }}" class="row g-3">
-                <div class="col-md-6">
+                                <div class="col-md-6">
                     <label for="query" class="form-label">Ключевые слова</label>
-                    <input type="text" id="query" name="query" value="{{ query }}" class="form-control"
+                    <input type="text" id="query" name="query" value="{{ query or '' }}" class="form-control"
                         placeholder="Например: Python, Java, Frontend...">
                 </div>
                 <div class="col-md-6">
                     <label for="location" class="form-label">Местоположение</label>
-                    <input type="text" id="location" name="location" value="{{ location }}" class="form-control"
+                    <input type="text" id="location" name="location" value="{{ location or '' }}" class="form-control"
                         placeholder="Например: Москва, Санкт-Петербург...">
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label for="company" class="form-label">Компания</label>
-                    <input type="text" id="company" name="company" value="{{ company }}" class="form-control"
+                    <input type="text" id="company" name="company" value="{{ company or '' }}" class="form-control"
                         placeholder="Название компании">
                 </div>
                 <div class="col-md-3">
+                    <label for="source" class="form-label">Источник</label>
+                    <select id="source" name="source" class="form-select">
+                        <option value="">Все источники</option>
+                        {% for src in sources %}
+                        <option value="{{ src }}" {% if src == source %}selected{% endif %}>{{ src }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
                     <label for="salary_min" class="form-label">Минимальная зарплата</label>
-                    <input type="number" id="salary_min" name="salary_min" value="{{ salary_min }}" class="form-control"
+                    <input type="number" id="salary_min" name="salary_min" value="{{ salary_min or '' }}" class="form-control"
                         placeholder="От">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label for="salary_max" class="form-label">Максимальная зарплата</label>
-                    <input type="number" id="salary_max" name="salary_max" value="{{ salary_max }}" class="form-control"
+                    <input type="number" id="salary_max" name="salary_max" value="{{ salary_max or '' }}" class="form-control"
                         placeholder="До">
                 </div>
                 <div class="col-md-2">
@@ -74,13 +83,14 @@
         <div class="row align-items-center">
             <div class="col">
                 <strong>Найдено:</strong> {{ total_vacancies }} вакансий
-                {% if query or location or company or salary_min or salary_max %}
+                {% if query or location or company or salary_min or salary_max or source %}
                 по запросу
                 {% if query %}<span class="badge bg-primary">{{ query }}</span>{% endif %}
                 {% if location %}<span class="badge bg-info">{{ location }}</span>{% endif %}
                 {% if company %}<span class="badge bg-secondary">{{ company }}</span>{% endif %}
                 {% if salary_min %}<span class="badge bg-success">от {{ salary_min }} ₽</span>{% endif %}
                 {% if salary_max %}<span class="badge bg-danger">до {{ salary_max }} ₽</span>{% endif %}
+                {% if source %}<span class="badge bg-dark">{{ source }}</span>{% endif %}
                 {% endif %}
             </div>
             <div class="col-auto">

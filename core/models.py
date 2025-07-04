@@ -1,7 +1,9 @@
-# core/models.py
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy import String, Integer, DateTime, Text, UniqueConstraint
+import sqlalchemy as sa
 from datetime import datetime
+
+from sqlalchemy import DateTime, Integer, String, Text, UniqueConstraint
+from sqlalchemy.dialects.postgresql import TSVECTOR
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
@@ -28,6 +30,11 @@ class Vacancy(Base):
     # Добавляем поля для нормализованной зарплаты
     salary_min_rub: Mapped[int] = mapped_column(Integer, nullable=True)
     salary_max_rub: Mapped[int] = mapped_column(Integer, nullable=True)
+
+    # Поле для полнотекстового поиска
+    tsvector_search: Mapped[sa.dialects.postgresql.TSVECTOR] = mapped_column(
+        TSVECTOR, nullable=True, index=True
+    )
 
     # Уникальный ключ для предотвращения дубликатов
     __table_args__ = (

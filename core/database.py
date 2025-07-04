@@ -3,7 +3,7 @@
 from contextlib import contextmanager
 from typing import Generator, List, Optional
 
-from sqlalchemy import create_engine, func, or_, select
+from sqlalchemy import create_engine, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -73,6 +73,7 @@ def get_filtered_vacancies(
 ) -> List[Vacancy]:
     """
     Получает отфильтрованный и отсортированный список вакансий из БД с пагинацией.
+    Использует полнотекстовый поиск PostgreSQL для поля 'query'.
 
     Args:
         db: Сессия SQLAlchemy.
@@ -93,14 +94,11 @@ def get_filtered_vacancies(
     filters = []
 
     if query:
-        search_pattern = f"%{query}%"
-        filters.append(
-            or_(
-                Vacancy.title.ilike(search_pattern),
-                Vacancy.description.ilike(search_pattern),
-                Vacancy.company.ilike(search_pattern),
-            )
+        # ИСПРАВЛЕНИЕ 2: Передаем в .match() просто строку. SQLAlchemy сам вызовет plainto_tsquery.
+        stmt = stmt.where(
+            Vacancy.tsvector_search.match(query, postgresql_regconfig="russian")
         )
+
     if location:
         filters.append(Vacancy.location.ilike(f"%{location}%"))
     if company:
@@ -121,7 +119,15 @@ def get_filtered_vacancies(
     if sort_by == "salary_max_rub":
         stmt = stmt.order_by(Vacancy.salary_max_rub.desc().nulls_last())
     else:
-        stmt = stmt.order_by(Vacancy.published_at.desc())
+        if query:
+            # Для ранжирования используем to_tsquery, так как она дает больше контроля
+            rank = func.ts_rank(
+                Vacancy.tsvector_search,
+                func.to_tsquery("russian", query.replace(" ", " & ")),
+            ).desc()
+            stmt = stmt.order_by(rank, Vacancy.published_at.desc())
+        else:
+            stmt = stmt.order_by(Vacancy.published_at.desc())
 
     # Пагинация
     offset = (page - 1) * per_page
@@ -142,6 +148,7 @@ def get_total_vacancies_count(
 ) -> int:
     """
     Возвращает общее количество вакансий, соответствующих фильтрам.
+    Использует полнотекстовый поиск PostgreSQL для поля 'query'.
 
     Args:
         db: Сессия SQLAlchemy.
@@ -154,14 +161,11 @@ def get_total_vacancies_count(
     filters = []
 
     if query:
-        search_pattern = f"%{query}%"
-        filters.append(
-            or_(
-                Vacancy.title.ilike(search_pattern),
-                Vacancy.description.ilike(search_pattern),
-                Vacancy.company.ilike(search_pattern),
-            )
+        # ИСПРАВЛЕНИЕ 2: Передаем в .match() просто строку.
+        stmt = stmt.where(
+            Vacancy.tsvector_search.match(query, postgresql_regconfig="russian")
         )
+
     if location:
         filters.append(Vacancy.location.ilike(f"%{location}%"))
     if company:
