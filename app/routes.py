@@ -1,7 +1,7 @@
-# app/routes.py
+from datetime import datetime
 from math import ceil
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from core.database import (
     get_db,
@@ -10,6 +10,8 @@ from core.database import (
     get_unique_cities,
     get_unique_sources,
 )
+from core.extensions import scheduler  # <-- ИМПОРТИРУЕМ ИЗ EXTENSIONS
+from core.scheduler import update_vacancies
 
 bp = Blueprint("main", __name__)
 
@@ -41,7 +43,10 @@ def vacancies():
 
         # --- Параметры сортировки ---
         sort = request.args.get("sort", "date", type=str)
-        sort_by = "salary_max_rub" if sort == "salary" else "published_at"
+        direction = request.args.get("direction", "desc", type=str)
+        if direction not in ["asc", "desc"]:
+            direction = "desc"  # Валидация
+        sort_by = "salary" if sort == "salary" else "published_at"
 
         # --- Параметры пагинации ---
         page = request.args.get("page", 1, type=int)
@@ -50,7 +55,6 @@ def vacancies():
         per_page = max(10, min(100, per_page))
 
         with get_db() as db:
-            # Получаем вакансии и общее количество с учетом всех фильтров
             current_vacancies = get_filtered_vacancies(
                 db,
                 page=page,
@@ -62,6 +66,7 @@ def vacancies():
                 salary_max=salary_max,
                 source=source,
                 sort_by=sort_by,
+                sort_order=direction,
             )
             total_vacancies = get_total_vacancies_count(
                 db,
@@ -72,7 +77,6 @@ def vacancies():
                 salary_max=salary_max,
                 source=source,
             )
-            # Получаем списки для фильтров
             sources = get_unique_sources(db)
 
         total_pages = ceil(total_vacancies / per_page) if total_vacancies > 0 else 1
@@ -83,11 +87,7 @@ def vacancies():
         print(f"Ошибка при обработке запроса: {e}")
         print(traceback.format_exc())
         error_message = f"Произошла внутренняя ошибка сервера: {e}"
-        # В случае ошибки возвращаем пустые данные
-        current_vacancies = []
-        total_vacancies = 0
-        total_pages = 1
-        sources = []
+        current_vacancies, total_vacancies, total_pages, sources = [], 0, 1, []
 
     return render_template(
         "vacancies.html",
@@ -96,7 +96,6 @@ def vacancies():
         total_pages=total_pages,
         per_page=per_page,
         total_vacancies=total_vacancies,
-        # Возвращаем параметры для сохранения в форме
         query=query,
         location=location,
         company=company,
@@ -104,6 +103,30 @@ def vacancies():
         salary_max=salary_max,
         source=source,
         sort=sort,
+        direction=direction,
         sources=sources,
         error=error_message,
     )
+
+
+@bp.route("/trigger-parse", methods=["POST"])
+def trigger_parse():
+    """Запускает задачу парсинга в фоновом режиме."""
+    query = request.form.get("query", "Python")
+    if not query:
+        query = "Python"  # Запрос по умолчанию
+
+    # Запускаем задачу один раз, немедленно
+    scheduler.add_job(
+        update_vacancies,
+        "date",  # Триггер 'date' без run_date означает "запустить немедленно"
+        args=[query],
+        id=f"manual_parse_{datetime.now().timestamp()}",  # Уникальный ID для задачи
+    )
+
+    flash(
+        f"Задача парсинга по запросу '{query}' запущена в фоновом режиме. "
+        "Результаты появятся через несколько минут.",
+        "success",
+    )
+    return redirect(url_for("main.vacancies"))

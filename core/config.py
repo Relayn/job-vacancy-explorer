@@ -25,12 +25,18 @@ class Settings(BaseSettings):
     # Настройки прокси (опционально)
     PROXY_LIST: Optional[str] = None
 
+    # Новая переменная для тестовой БД
+    TEST_DATABASE_URL: Optional[str] = None
+
     @property
     def database_url(self) -> str:
         """
         Возвращает URL для подключения к базе данных SQLAlchemy.
         Использует диалект 'psycopg' для psycopg v3.
+        Если установлена переменная TEST_DATABASE_URL, используется она.
         """
+        if self.TEST_DATABASE_URL:
+            return self.TEST_DATABASE_URL
         return f"postgresql+psycopg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
     @property

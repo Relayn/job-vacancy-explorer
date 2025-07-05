@@ -70,6 +70,7 @@ def get_filtered_vacancies(
     salary_max: Optional[int] = None,
     source: Optional[str] = None,
     sort_by: str = "published_at",
+    sort_order: str = "desc",
 ) -> List[Vacancy]:
     """
     Получает отфильтрованный и отсортированный список вакансий из БД с пагинацией.
@@ -86,6 +87,7 @@ def get_filtered_vacancies(
         salary_max: Максимальная зарплата.
         source: Фильтр по источнику.
         sort_by: Поле для сортировки ('published_at' или 'salary_max_rub').
+        sort_order: Направление сортировки ('asc' или 'desc').
 
     Returns:
         Список ORM-объектов Vacancy.
@@ -94,7 +96,6 @@ def get_filtered_vacancies(
     filters = []
 
     if query:
-        # ИСПРАВЛЕНИЕ 2: Передаем в .match() просто строку. SQLAlchemy сам вызовет plainto_tsquery.
         stmt = stmt.where(
             Vacancy.tsvector_search.match(query, postgresql_regconfig="russian")
         )
@@ -106,7 +107,6 @@ def get_filtered_vacancies(
     if source:
         filters.append(Vacancy.source == source)
 
-    # Фильтрация по зарплате
     if salary_min is not None:
         filters.append(Vacancy.salary_max_rub >= salary_min)
     if salary_max is not None:
@@ -115,19 +115,25 @@ def get_filtered_vacancies(
     if filters:
         stmt = stmt.where(*filters)
 
-    # Сортировка
-    if sort_by == "salary_max_rub":
-        stmt = stmt.order_by(Vacancy.salary_max_rub.desc().nulls_last())
+    # --- Логика сортировки ---
+    order_field = (
+        Vacancy.salary_max_rub if sort_by == "salary" else Vacancy.published_at
+    )
+
+    if sort_order == "asc":
+        order_expression = order_field.asc().nulls_first()
     else:
-        if query:
-            # Для ранжирования используем to_tsquery, так как она дает больше контроля
-            rank = func.ts_rank(
-                Vacancy.tsvector_search,
-                func.to_tsquery("russian", query.replace(" ", " & ")),
-            ).desc()
-            stmt = stmt.order_by(rank, Vacancy.published_at.desc())
-        else:
-            stmt = stmt.order_by(Vacancy.published_at.desc())
+        order_expression = order_field.desc().nulls_last()
+
+    # При поиске по релевантности, она всегда первична
+    if query:
+        rank = func.ts_rank(
+            Vacancy.tsvector_search,
+            func.to_tsquery("russian", query.replace(" ", " & ")),
+        ).desc()
+        stmt = stmt.order_by(rank, order_expression)
+    else:
+        stmt = stmt.order_by(order_expression)
 
     # Пагинация
     offset = (page - 1) * per_page

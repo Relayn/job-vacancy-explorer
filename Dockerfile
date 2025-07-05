@@ -1,5 +1,5 @@
 # Этап 1: Базовый образ с Python
-FROM python:3.11-slim as base
+FROM python:3.11-slim AS base
 
 # Устанавливаем рабочую директорию
 WORKDIR /app
@@ -19,15 +19,14 @@ RUN poetry config virtualenvs.create false
 
 
 # Этап 2: Установка зависимостей
-FROM base as builder
+FROM base AS builder
 
 # Копируем файлы для установки зависимостей
 COPY pyproject.toml poetry.lock* ./
 
-# Устанавливаем только производственные зависимости
-# --only main: Установить только зависимости из основной группы
+# Устанавливаем все зависимости, включая dev, для тестирования и линтинга
 # --no-interaction и --no-ansi для чистого вывода в логах
-RUN poetry install --only main --no-interaction --no-ansi
+RUN poetry install --no-interaction --no-ansi
 
 # Этап 3: Финальный образ
 FROM base
@@ -46,4 +45,4 @@ COPY . .
 EXPOSE 8000
 
 # Команда для запуска приложения через Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "run:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--preload", "run:app"]

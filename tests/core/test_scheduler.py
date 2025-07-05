@@ -1,4 +1,3 @@
-# tests/core/test_scheduler.py
 from datetime import datetime
 from unittest.mock import Mock, patch
 
@@ -63,25 +62,31 @@ def test_update_vacancies_success(
 
 @patch("core.scheduler.get_db")
 @patch("core.scheduler.add_vacancies_from_dto")
+@patch("core.scheduler.SuperJobParser")
 @patch("core.scheduler.HHParser")
 def test_update_vacancies_no_vacancies_found(
-    MockHHParser, mock_add_vacancies, mock_get_db
+    MockHHParser,
+    MockSuperJobParser,
+    mock_add_vacancies,
+    mock_get_db,
+    setup_test_db,
 ):
     """
     Тест сценария, когда парсер не нашел ни одной вакансии.
     """
     # Arrange
-    # Парсер возвращает пустой список
-    mock_parser_instance = MockHHParser.return_value
-    mock_parser_instance.parse.return_value = []
+    # Парсеры возвращают пустые списки
+    MockHHParser.return_value.parse.return_value = []
+    MockSuperJobParser.return_value.parse.return_value = []
 
     # Act
     update_vacancies(search_query="ExoticLanguage")
 
     # Assert
-    # Парсер был вызван
-    mock_parser_instance.parse.assert_called_once_with("ExoticLanguage")
+    # Парсеры были вызваны
+    MockHHParser.return_value.parse.assert_called_once_with("ExoticLanguage")
+    MockSuperJobParser.return_value.parse.assert_called_once_with("ExoticLanguage")
 
-    # А вот функции для работы с БД - нет
+    # А вот функции для работы с БД - нет, так как список вакансий пуст
     mock_get_db.assert_not_called()
     mock_add_vacancies.assert_not_called()

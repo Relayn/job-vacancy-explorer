@@ -74,8 +74,20 @@
     <!-- Результаты поиска -->
     {% if vacancies|length == 0 %}
     <div class="alert alert-info shadow-sm">
-        <i class="fas fa-info-circle me-2"></i>
-        Нет найденных вакансий по вашему запросу. Попробуйте изменить параметры поиска.
+        <div class="row align-items-center">
+            <div class="col">
+                <i class="fas fa-info-circle me-2"></i>
+                Нет найденных вакансий по вашему запросу. Попробуйте изменить параметры поиска или запустить парсер вручную.
+            </div>
+            <div class="col-auto">
+                <form action="{{ url_for('main.trigger_parse') }}" method="POST" class="d-flex">
+                    <input type="text" name="query" class="form-control me-2" value="{{ query or 'Python' }}" placeholder="Запрос для парсинга">
+                    <button type="submit" class="btn btn-success text-nowrap">
+                        <i class="fas fa-sync me-1"></i> Запустить парсер
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
     {% else %}
     <!-- Информация о результатах -->
@@ -96,13 +108,25 @@
             <div class="col-auto">
                 <div class="btn-group" role="group" aria-label="Сортировка">
                     <button type="button" class="btn btn-sm btn-outline-secondary" disabled>Сортировка:</button>
-                    <a href="{{ url_for('main.vacancies', query=query, location=location, company=company, salary_min=salary_min, salary_max=salary_max, per_page=per_page, sort='date') }}"
-                        class="btn btn-sm btn-outline-primary {% if sort == 'date' %}active{% endif %}">
+
+                    {# Логика для кнопки "По дате" #}
+                    {% set date_direction = 'desc' if sort != 'date' or direction == 'asc' else 'asc' %}
+                    <a href="{{ url_for('main.vacancies', query=query, location=location, company=company, salary_min=salary_min, salary_max=salary_max, per_page=per_page, sort='date', direction=date_direction) }}"
+                       class="btn btn-sm btn-outline-primary {% if sort == 'date' %}active{% endif %}">
                         По дате
+                        {% if sort == 'date' %}
+                            {% if direction == 'desc' %}<i class="fas fa-arrow-down-long ms-1"></i>{% else %}<i class="fas fa-arrow-up-long ms-1"></i>{% endif %}
+                        {% endif %}
                     </a>
-                    <a href="{{ url_for('main.vacancies', query=query, location=location, company=company, salary_min=salary_min, salary_max=salary_max, per_page=per_page, sort='salary') }}"
-                        class="btn btn-sm btn-outline-primary {% if sort == 'salary' %}active{% endif %}">
+
+                    {# Логика для кнопки "По зарплате" #}
+                    {% set salary_direction = 'desc' if sort != 'salary' or direction == 'asc' else 'asc' %}
+                    <a href="{{ url_for('main.vacancies', query=query, location=location, company=company, salary_min=salary_min, salary_max=salary_max, per_page=per_page, sort='salary', direction=salary_direction) }}"
+                       class="btn btn-sm btn-outline-primary {% if sort == 'salary' %}active{% endif %}">
                         По зарплате
+                        {% if sort == 'salary' %}
+                            {% if direction == 'desc' %}<i class="fas fa-arrow-down-long ms-1"></i>{% else %}<i class="fas fa-arrow-up-long ms-1"></i>{% endif %}
+                        {% endif %}
                     </a>
                 </div>
             </div>
