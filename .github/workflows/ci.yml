@@ -56,6 +56,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Create .env file for CI
+        run: cp .env.example .env
+
       - name: Start services
         env:
           # Эти переменные используются docker-compose для настройки контейнера с БД
