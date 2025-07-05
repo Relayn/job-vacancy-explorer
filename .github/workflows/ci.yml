@@ -62,7 +62,7 @@ jobs:
           POSTGRES_USER: user
           POSTGRES_PASSWORD: password
           POSTGRES_DB: vacancies_db
-        run: docker-compose up -d
+        run: docker compose up -d
 
       - name: Wait for PostgreSQL to be healthy
         run: |
@@ -74,9 +74,9 @@ jobs:
       - name: Run integration tests
         # Запускаем pytest только для директории tests/integration
         # Флаг -T нужен для неинтерактивного выполнения в CI
-        run: docker-compose exec -T app poetry run pytest -m "integration"
+        run: docker compose exec -T app poetry run pytest -m "integration"
 
       - name: Stop services
         # Этот шаг выполнится всегда, даже если тесты упали
         if: always()
-        run: docker-compose down
+        run: docker compose down
