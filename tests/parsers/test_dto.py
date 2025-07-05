@@ -1,4 +1,3 @@
-# tests/parsers/test_dto.py
 from datetime import datetime
 
 import pytest
@@ -20,30 +19,30 @@ BASE_VACANCY_DATA = {
 @pytest.mark.parametrize(
     "salary_str, expected_min, expected_max",
     [
-        # --- Кейсы без зарплаты ---
+        # Без указания зарплаты
         (None, None, None),
         ("", None, None),
         ("по договоренности", None, None),
         ("з/п не указана", None, None),
-        # --- Кейсы с "от" ---
+        # Только "от"
         ("от 150000 руб.", 150000, None),
         ("от 150 000 RUB", 150000, None),
         ("от 150\u202f000 RUR", 150000, None),  # с неразрывным пробелом
-        # --- Кейсы с "до" ---
+        # Только "до"
         ("до 250000 руб.", None, 250000),
         ("до 250 000 RUB", None, 250000),
-        # --- Кейсы с диапазоном ---
+        # Диапазон
         ("150000-250000 руб.", 150000, 250000),
         ("150 000-250 000 RUB", 150000, 250000),
         ("от 150000 до 250000 руб.", 150000, 250000),
-        # --- Кейсы с точной суммой ---
+        # Точная сумма
         ("100000 руб.", 100000, 100000),
-        # --- Кейсы с валютой (курсы: USD=90, EUR=100, KZT=0.2) ---
+        # Валюта (курсы: USD=90, EUR=100, KZT=0.2)
         ("от 2000 USD", 180000, None),
         ("до 3000 EUR", None, 300000),
         ("3000-4000 USD", 270000, 360000),
         ("500000 KZT", 100000, 100000),
-        # --- Пограничные кейсы ---
+        # Пограничные случаи
         ("от 0 руб.", 0, None),
         ("без цифр", None, None),
     ],
@@ -52,13 +51,8 @@ def test_salary_normalization(salary_str, expected_min, expected_max):
     """
     Тестирует логику нормализации зарплаты в VacancyDTO.
     """
-    # Arrange
     data = {"salary": salary_str, **BASE_VACANCY_DATA}
-
-    # Act
     dto = VacancyDTO(**data)
-
-    # Assert
     assert dto.salary_min_rub == expected_min
     assert dto.salary_max_rub == expected_max
-    assert dto.salary == salary_str  # Проверяем, что исходная строка сохраняется
+    assert dto.salary == salary_str

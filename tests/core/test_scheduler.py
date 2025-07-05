@@ -15,7 +15,6 @@ def test_update_vacancies_success(
     """
     Тест успешного выполнения задачи обновления вакансий.
     """
-    # Arrange
     # 1. Настраиваем мок парсера
     mock_parser_instance = MockHHParser.return_value
     mock_dto_list = [
@@ -74,7 +73,6 @@ def test_update_vacancies_no_vacancies_found(
     """
     Тест сценария, когда парсер не нашел ни одной вакансии.
     """
-    # Arrange
     # Парсеры возвращают пустые списки
     MockHHParser.return_value.parse.return_value = []
     MockSuperJobParser.return_value.parse.return_value = []

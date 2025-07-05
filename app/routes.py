@@ -10,7 +10,7 @@ from core.database import (
     get_unique_cities,
     get_unique_sources,
 )
-from core.extensions import scheduler  # <-- ИМПОРТИРУЕМ ИЗ EXTENSIONS
+from core.extensions import scheduler
 from core.scheduler import update_vacancies
 
 bp = Blueprint("main", __name__)
@@ -33,22 +33,17 @@ def vacancies():
     """Отображает страницу с вакансиями, фильтрами и пагинацией."""
     error_message = None
     try:
-        # --- Параметры фильтрации ---
         query = request.args.get("query", type=str)
         location = request.args.get("location", type=str)
         company = request.args.get("company", type=str)
         salary_min = request.args.get("salary_min", type=int)
         salary_max = request.args.get("salary_max", type=int)
         source = request.args.get("source", type=str)
-
-        # --- Параметры сортировки ---
         sort = request.args.get("sort", "date", type=str)
         direction = request.args.get("direction", "desc", type=str)
         if direction not in ["asc", "desc"]:
             direction = "desc"  # Валидация
         sort_by = "salary" if sort == "salary" else "published_at"
-
-        # --- Параметры пагинации ---
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 20, type=int)
         page = max(1, page)

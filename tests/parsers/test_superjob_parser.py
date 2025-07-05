@@ -102,7 +102,9 @@ def test_date_parsing(mock_datetime_class):
     assert parser._parse_date("Сегодня") == now
     assert parser._parse_date("Вчера") == now - timedelta(days=1)
     assert parser._parse_date("19 июля") == real_datetime_class(2025, 7, 19)
-    assert parser._parse_date("Неизвестная дата") == now  # Fallback
+    assert (
+        parser._parse_date("Неизвестная дата") == now
+    )  # Возврат текущей даты, если формат не распознан
 
 
 def test_superjob_parser_network_error():

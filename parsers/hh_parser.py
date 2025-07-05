@@ -1,4 +1,3 @@
-# parsers/hh_parser.py
 import time
 from datetime import datetime
 from typing import Dict, List, Optional
@@ -8,7 +7,6 @@ import requests
 from parsers.base_parser import BaseParser
 from parsers.dto import VacancyDTO
 
-# Константы
 HH_API_URL = "https://api.hh.ru/vacancies"
 REQUEST_DELAY = 0.5  # Задержка между запросами
 USER_AGENT = "JobVacancyExplorer/1.0 (https://github.com/Relayn/job-vacancy-explorer)"

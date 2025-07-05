@@ -1,30 +1,26 @@
-# tests/conftest.py
 import os
 import sys
 
-# --- Third-party imports ---
+# --- Импорты сторонних библиотек ---
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.types import TypeDecorator
 
-# --- Project Path Setup ---
+# --- Настройка пути проекта ---
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-# --- Local Application Imports ---
+# --- Импорты локальных модулей приложения ---
 from core.config import settings  # noqa: E402
 from core.models import Base  # noqa: E402
 
 
-# --- Dialect-specific type compilation for testing ---
+# --- Компиляция специфичных для диалекта типов для тестирования ---
 @compiles(postgresql.TSVECTOR, "sqlite")
-def compile_tsvector_for_sqlite(
-    element: TypeDecorator, compiler: any, **kw: any
-) -> str:
-    """Compile TSVECTOR as TEXT for the SQLite dialect."""
+def compile_tsvector_for_sqlite(**kw: any) -> str:
+    """Компилирует TSVECTOR как TEXT для диалекта SQLite."""
     return "TEXT"
 
 

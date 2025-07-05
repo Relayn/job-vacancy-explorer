@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from core.config import settings
 from core.models import Vacancy
-from parsers.dto import VacancyDTO  # Предполагаем, что DTO будет здесь
+from parsers.dto import VacancyDTO
 
 # Создаем engine и sessionmaker для всего приложения
 engine = create_engine(settings.database_url, pool_pre_ping=True)
@@ -115,7 +115,6 @@ def get_filtered_vacancies(
     if filters:
         stmt = stmt.where(*filters)
 
-    # --- Логика сортировки ---
     order_field = (
         Vacancy.salary_max_rub if sort_by == "salary" else Vacancy.published_at
     )
@@ -125,7 +124,6 @@ def get_filtered_vacancies(
     else:
         order_expression = order_field.desc().nulls_last()
 
-    # При поиске по релевантности, она всегда первична
     if query:
         rank = func.ts_rank(
             Vacancy.tsvector_search,
@@ -135,7 +133,6 @@ def get_filtered_vacancies(
     else:
         stmt = stmt.order_by(order_expression)
 
-    # Пагинация
     offset = (page - 1) * per_page
     stmt = stmt.offset(offset).limit(per_page)
 
@@ -167,7 +164,6 @@ def get_total_vacancies_count(
     filters = []
 
     if query:
-        # ИСПРАВЛЕНИЕ 2: Передаем в .match() просто строку.
         stmt = stmt.where(
             Vacancy.tsvector_search.match(query, postgresql_regconfig="russian")
         )

@@ -1,4 +1,3 @@
-# core/scheduler.py
 from datetime import datetime
 
 from core.config import settings
@@ -7,7 +6,7 @@ from core.database import (
     get_db,
     get_total_vacancies_count,
 )
-from core.extensions import scheduler  # <-- ИМПОРТИРУЕМ ИЗ EXTENSIONS
+from core.extensions import scheduler
 from parsers.hh_parser import HHParser
 from parsers.superjob_parser import SuperJobParser
 

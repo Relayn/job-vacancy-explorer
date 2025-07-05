@@ -15,7 +15,7 @@ from parsers.dto import VacancyDTO
 SUPERJOB_BASE_URL = "https://russia.superjob.ru"
 REQUEST_DELAY = 1  # Задержка между запросами для вежливости
 USER_AGENT = "JobVacancyExplorer/1.0 (https://github.com/Relayn/job-vacancy-explorer)"
-MAX_PAGES = 5  # Ограничение на количество страниц для парсинга
+MAX_PAGES = 5
 
 
 class SuperJobParser(BaseParser):
@@ -74,7 +74,7 @@ class SuperJobParser(BaseParser):
             year = datetime.now().year
             return datetime(year, month, day)
 
-        return datetime.now()  # Fallback
+        return datetime.now()  # Возврат текущей даты, если формат не распознан
 
     def _parse_vacancy_card(self, card: Tag) -> Optional[VacancyDTO]:
         """Извлекает данные из одной карточки вакансии."""
