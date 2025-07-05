@@ -19,7 +19,7 @@ from core.models import Base  # noqa: E402
 
 # --- Компиляция специфичных для диалекта типов для тестирования ---
 @compiles(postgresql.TSVECTOR, "sqlite")
-def compile_tsvector_for_sqlite(**kw: any) -> str:
+def compile_tsvector_for_sqlite(element, compiler, **kw):
     """Компилирует TSVECTOR как TEXT для диалекта SQLite."""
     return "TEXT"
 
