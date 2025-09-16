@@ -18,13 +18,13 @@ pydantic = "^2.8.2"
 pydantic-settings = "^2.3.4"
 sqlalchemy = "^2.0.31"
 alembic = "^1.13.1"
-markupsafe = "^2.1.5"
+markupsafe = "^3.0.2"
 tzlocal = "^5.2"
 beautifulsoup4 = "^4.13.4"
 lxml = "^6.0.0"
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.5.5"
+ruff = "^0.13.0"
 black = "^24.8.0"
 pytest = "^8.3.2"
 pre-commit = "^4.2.0"
@@ -33,3 +33,12 @@ pytest-dotenv = "^0.5.2"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.ruff.format]
+quote-style = "double"

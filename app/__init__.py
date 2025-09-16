@@ -1,7 +1,9 @@
-# Flask app initialization
+import logging
+
 from flask import Flask
-from .routes import bp
 from markupsafe import Markup
+
+from .routes import bp
 
 
 def create_app():
@@ -9,6 +11,14 @@ def create_app():
     Фабрика для создания экземпляра приложения Flask.
     Здесь происходит инициализация, регистрация blueprint'ов и запуск фоновых служб.
     """
+    # --- НАСТРОЙКА ЛОГИРОВАНИЯ ---
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    # -----------------------------
+
     app = Flask(__name__)
 
     # Регистрация пользовательского фильтра nl2br

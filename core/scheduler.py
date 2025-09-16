@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 from core.config import settings
@@ -10,12 +11,12 @@ from core.extensions import scheduler
 from parsers.hh_parser import HHParser
 from parsers.superjob_parser import SuperJobParser
 
+logger = logging.getLogger(__name__)
+
 
 def update_vacancies(search_query: str = "Python"):
     """Обновляет вакансии в базе данных, последовательно запуская все парсеры."""
-    print(
-        f"[{datetime.now()}] Запуск задачи обновления вакансий по запросу: '{search_query}'..."
-    )
+    logger.info("Запуск задачи обновления вакансий по запросу: '%s'...", search_query)
     parsers = [HHParser, SuperJobParser]
     all_vacancies_dto = []
     for parser_class in parsers:
@@ -24,11 +25,14 @@ def update_vacancies(search_query: str = "Python"):
             vacancies_from_parser = parser.parse(search_query)
             all_vacancies_dto.extend(vacancies_from_parser)
         except Exception as e:
-            print(
-                f"[{datetime.now()}] КРИТИЧЕСКАЯ ОШИБКА в парсере {parser_class.__name__}: {e}"
+            logger.critical(
+                "КРИТИЧЕСКАЯ ОШИБКА в парсере %s: %s",
+                parser_class.__name__,
+                e,
+                exc_info=True,
             )
     if not all_vacancies_dto:
-        print(f"[{datetime.now()}] Новых вакансий по всем источникам не найдено.")
+        logger.info("Новых вакансий по всем источникам не найдено.")
         return
     try:
         with get_db() as db:
@@ -36,13 +40,13 @@ def update_vacancies(search_query: str = "Python"):
             add_vacancies_from_dto(db, all_vacancies_dto)
             count_after = get_total_vacancies_count(db)
             added_count = count_after - count_before
-            print(
-                f"[{datetime.now()}] Задача завершена. "
-                f"Всего найдено {len(all_vacancies_dto)} вакансий, "
-                f"добавлено {added_count} новых."
+            logger.info(
+                "Задача завершена. Всего найдено %d вакансий, добавлено %d новых.",
+                len(all_vacancies_dto),
+                added_count,
             )
     except Exception as e:
-        print(f"[{datetime.now()}] Ошибка при сохранении вакансий в БД: {e}")
+        logger.error("Ошибка при сохранении вакансий в БД: %s", e, exc_info=True)
 
 
 def start_scheduler():

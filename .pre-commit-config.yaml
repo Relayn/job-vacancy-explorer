@@ -1,21 +1,18 @@
 # .pre-commit-config.yaml
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v6.0.0
     hooks:
     -   id: check-yaml
     -   id: check-toml
     -   id: end-of-file-fixer
     -   id: trailing-whitespace
 
--   repo: https://github.com/psf/black
-    rev: 24.8.0 # Используем ту же версию, что и в pyproject.toml
-    hooks:
-    -   id: black
-
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.5.5 # Используем ту же версию, что и в pyproject.toml
+    rev: v0.13.0 # Используем ту же версию, что и в pyproject.toml
     hooks:
-    -   id: ruff
-        args: [--fix]
-    -   id: ruff-format
+        # 1. Хук для линтинга с авто-исправлением
+        - id: ruff
+          args: [ --fix ]
+        # 2. Хук для форматирования
+        - id: ruff-format

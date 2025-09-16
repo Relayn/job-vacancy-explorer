@@ -1,3 +1,4 @@
+import logging
 import random
 import time
 from datetime import datetime, timedelta
@@ -13,9 +14,10 @@ from parsers.dto import VacancyDTO
 
 # Константы
 SUPERJOB_BASE_URL = "https://russia.superjob.ru"
-REQUEST_DELAY = 1  # Задержка между запросами для вежливости
+REQUEST_DELAY = 1  # Задержка между запросами
 USER_AGENT = "JobVacancyExplorer/1.0 (https://github.com/Relayn/job-vacancy-explorer)"
 MAX_PAGES = 5
+logger = logging.getLogger(__name__)
 
 
 class SuperJobParser(BaseParser):
@@ -23,11 +25,13 @@ class SuperJobParser(BaseParser):
 
     def __init__(self):
         """Инициализирует сессию requests и настраивает прокси, если они есть."""
-        self.session = requests.Session()
         self.session.headers.update(
             {
                 "User-Agent": USER_AGENT,
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                "Accept": (
+                    "text/html,application/xhtml+xml,application/xml;q=0.9,"
+                    "image/avif,image/webp,*/*;q=0.8"
+                ),
             }
         )
         self.proxies = settings.proxy_list_as_array
@@ -132,20 +136,21 @@ class SuperJobParser(BaseParser):
                 original_url=url,
             )
         except (AttributeError, KeyError, ValueError) as e:
-            print(f"Ошибка при парсинге карточки вакансии: {e}")
+            logger.error("Ошибка при парсинге карточки вакансии: %s", e)
             return None
 
     def parse(self, search_query: str) -> List[VacancyDTO]:
         """Основной метод парсинга вакансий с superjob.ru."""
-        print(
-            f"[{datetime.now()}] Начало парсинга superjob.ru по запросу: '{search_query}'"
-        )
+        logger.info("Начало парсинга superjob.ru по запросу: '%s'", search_query)
         vacancies_dto = []
         encoded_query = quote_plus(search_query)
 
         for page_num in range(1, MAX_PAGES + 1):
-            search_url = f"{SUPERJOB_BASE_URL}/vacancy/search/?keywords={encoded_query}&page={page_num}"
-            print(f"Парсинг страницы: {search_url}")
+            search_url = (
+                f"{SUPERJOB_BASE_URL}/vacancy/search/"
+                f"?keywords={encoded_query}&page={page_num}"
+            )
+            logger.info("Парсинг страницы: %s", search_url)
 
             try:
                 response = self.session.get(
@@ -153,7 +158,7 @@ class SuperJobParser(BaseParser):
                 )
                 response.raise_for_status()
             except requests.RequestException as e:
-                print(f"Ошибка при запросе страницы {page_num}: {e}")
+                logger.error("Ошибка при запросе страницы %d: %s", page_num, e)
                 break
 
             soup = BeautifulSoup(response.text, "lxml")
@@ -161,7 +166,7 @@ class SuperJobParser(BaseParser):
             vacancy_cards = soup.select("div.f-test-search-result-item")
 
             if not vacancy_cards:
-                print("Вакансии на странице не найдены, завершение парсинга.")
+                logger.info("Вакансии на странице не найдены, завершение парсинга.")
                 break
 
             for card in vacancy_cards:
@@ -172,12 +177,13 @@ class SuperJobParser(BaseParser):
             # Проверка наличия кнопки "Дальше"
             next_page_tag = soup.select_one("a.f-test-button-dalshe")
             if not next_page_tag:
-                print("Кнопка 'Дальше' не найдена, это последняя страница.")
+                logger.info("Кнопка 'Дальше' не найдена, это последняя страница.")
                 break
 
             time.sleep(REQUEST_DELAY)
 
-        print(
-            f"[{datetime.now()}] Парсинг superjob.ru завершен. Найдено {len(vacancies_dto)} вакансий."
+        logger.info(
+            "Парсинг superjob.ru завершен. Найдено %d вакансий.",
+            len(vacancies_dto),
         )
         return vacancies_dto

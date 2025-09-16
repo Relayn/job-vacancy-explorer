@@ -1,6 +1,7 @@
-from typing import List, Optional
+import json
+from typing import Dict, List, Optional
 
-from pydantic import model_validator
+from pydantic import computed_field, model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -26,6 +27,11 @@ class Settings(BaseSettings):
     # Настройки прокси (опционально)
     PROXY_LIST: Optional[str] = None
 
+    # Курсы валют в формате JSON
+    CURRENCY_RATES_JSON: str = (
+        '{"USD": 90, "EUR": 100, "KZT": 0.2, "UAH": 2.5, "BYN": 30, "RUR": 1, "RUB": 1}'
+    )
+
     # Переменная для тестовой БД
     TEST_DATABASE_URL: Optional[str] = None
 
@@ -45,11 +51,13 @@ class Settings(BaseSettings):
         ]
 
         if missing_fields:
-            raise ValueError(
-                f"Если TEST_DATABASE_URL не задан, следующие переменные окружения обязательны: {', '.join(missing_fields)}"
+            msg = (
+                "Если TEST_DATABASE_URL не задан, следующие переменные окружения "
+                f"обязательны: {', '.join(missing_fields)}"
             )
-        return self
+            raise ValueError(msg)
 
+    @computed_field  # type: ignore[misc]
     @property
     def database_url(self) -> str:
         """
@@ -65,11 +73,13 @@ class Settings(BaseSettings):
             [self.DB_USER, self.DB_PASSWORD, self.DB_HOST, self.DB_PORT, self.DB_NAME]
         ):
             raise ValueError(
-                "Невозможно сформировать database_url: отсутствуют необходимые настройки БД."
+                "Невозможно сформировать database_url: отсутствуют "
+                "необходимые настройки БД."
             )
 
         return f"postgresql+psycopg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
+    @computed_field  # type: ignore[misc]
     @property
     def proxy_list_as_array(self) -> List[str]:
         """
@@ -80,6 +90,30 @@ class Settings(BaseSettings):
             return []
         return [proxy.strip() for proxy in self.PROXY_LIST.split(",") if proxy.strip()]
 
+    @computed_field  # type: ignore[misc]
+    @property
+    def currency_rates(self) -> Dict[str, float]:
+        """
+        Парсит строку CURRENCY_RATES_JSON в словарь курсов валют.
+        Возвращает словарь по умолчанию в случае ошибки парсинга.
+        """
+        try:
+            rates = json.loads(self.CURRENCY_RATES_JSON)
+            # Убедимся, что все значения являются числами
+            return {k: float(v) for k, v in rates.items()}
+        except (TypeError, ValueError):
+            # В случае ошибки возвращаем безопасные значения по умолчанию
+            # ValueError включает в себя json.JSONDecodeError
+            return {
+                "USD": 90.0,
+                "EUR": 100.0,
+                "KZT": 0.2,
+                "UAH": 2.5,
+                "BYN": 30.0,
+                "RUR": 1.0,
+                "RUB": 1.0,
+            }
 
-# Создаем единственный экземпляр настроек, который будет использоваться во всем приложении
+
+# Создаем единственный экземпляр настроек для всего приложения
 settings = Settings()

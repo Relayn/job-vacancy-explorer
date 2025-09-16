@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from math import ceil
 
@@ -14,6 +15,7 @@ from core.extensions import scheduler
 from core.scheduler import update_vacancies
 
 bp = Blueprint("main", __name__)
+logger = logging.getLogger(__name__)
 
 
 @bp.route("/")
@@ -77,10 +79,7 @@ def vacancies():
         total_pages = ceil(total_vacancies / per_page) if total_vacancies > 0 else 1
 
     except Exception as e:
-        import traceback
-
-        print(f"Ошибка при обработке запроса: {e}")
-        print(traceback.format_exc())
+        logger.error("Ошибка при обработке запроса /vacancies: %s", e, exc_info=True)
         error_message = f"Произошла внутренняя ошибка сервера: {e}"
         current_vacancies, total_vacancies, total_pages, sources = [], 0, 1, []
 

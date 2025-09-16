@@ -4,6 +4,8 @@ from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, model_validator
 
+from core.config import settings
+
 
 class VacancyDTO(BaseModel):
     """Data Transfer Object для вакансий."""
@@ -31,17 +33,8 @@ class VacancyDTO(BaseModel):
             values["salary_max_rub"] = None
             return values
 
-        # --- Курсы валют (упрощенно, для примера на Июль 2025) ---
-        # В реальном проекте это должно быть вынесено в конфиг или отдельный сервис
-        currency_rates = {
-            "USD": 90,
-            "EUR": 100,
-            "KZT": 0.2,
-            "UAH": 2.5,
-            "BYN": 30,
-            "RUR": 1,
-            "RUB": 1,
-        }
+        # --- Получаем курсы валют из конфигурации ---
+        currency_rates = settings.currency_rates
 
         # --- Извлечение чисел и валюты ---
         cleaned_salary_str = salary_str.replace("\u202f", "").replace(" ", "")
@@ -52,23 +45,23 @@ class VacancyDTO(BaseModel):
                 currency = code
                 break
 
-        rate = currency_rates.get(currency, 1)
+        rate = currency_rates.get(currency, 1.0)
 
         # --- Логика парсинга ---
         min_salary, max_salary = None, None
         lower_salary_str = salary_str.lower()
 
         if numbers:
-            if "от" in lower_salary_str and "до" in lower_salary_str:
+            # Объединяем два идентичных блока в один
+            if ("от" in lower_salary_str and "до" in lower_salary_str) or (
+                len(numbers) == 2
+            ):
                 min_salary = min(numbers)
                 max_salary = max(numbers)
             elif "от" in lower_salary_str:
                 min_salary = numbers[0]
             elif "до" in lower_salary_str:
                 max_salary = numbers[0]
-            elif len(numbers) == 2:  # Диапазон "100-200"
-                min_salary = min(numbers)
-                max_salary = max(numbers)
             elif len(numbers) == 1:  # Одно число
                 min_salary = max_salary = numbers[0]
 

@@ -13,9 +13,9 @@ def test_postgres_connection():
     подключение к реальной БД, а не к тестовой SQLite.
     """
     # Убедимся, что мы не используем тестовую БД
-    assert (
-        settings.TEST_DATABASE_URL is None
-    ), "Интеграционные тесты не должны использовать TEST_DATABASE_URL"
+    assert settings.TEST_DATABASE_URL is None, (
+        "Интеграционные тесты не должны использовать TEST_DATABASE_URL"
+    )
 
     try:
         with get_db() as db:

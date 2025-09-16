@@ -1,3 +1,4 @@
+import logging
 import time
 from datetime import datetime
 from typing import Dict, List, Optional
@@ -10,6 +11,7 @@ from parsers.dto import VacancyDTO
 HH_API_URL = "https://api.hh.ru/vacancies"
 REQUEST_DELAY = 0.5  # Задержка между запросами
 USER_AGENT = "JobVacancyExplorer/1.0 (https://github.com/Relayn/job-vacancy-explorer)"
+logger = logging.getLogger(__name__)
 
 
 class HHParser(BaseParser):
@@ -75,7 +77,7 @@ class HHParser(BaseParser):
         vacancies_dto = []
         params = {"text": search_query, "area": area, "per_page": 50, "page": 0}
 
-        print(f"[{datetime.now()}] Начало парсинга hh.ru по запросу: '{search_query}'")
+        logger.info("Начало парсинга hh.ru по запросу: '%s'", search_query)
 
         page = 0
         while True:
@@ -85,7 +87,7 @@ class HHParser(BaseParser):
                 response.raise_for_status()
                 data = response.json()
             except requests.RequestException as e:
-                print(f"Ошибка запроса к API hh.ru: {e}")
+                logger.error("Ошибка запроса к API hh.ru: %s", e)
                 break
 
             items = data.get("items", [])
@@ -107,8 +109,10 @@ class HHParser(BaseParser):
                     )
                     vacancies_dto.append(dto)
                 except (KeyError, ValueError) as e:
-                    print(
-                        f"Пропущена вакансия {item.get('id')} из-за ошибки в данных: {e}"
+                    logger.warning(
+                        "Пропущена вакансия %s из-за ошибки в данных: %s",
+                        item.get("id"),
+                        e,
                     )
 
             total_pages = data.get("pages", 1)
@@ -118,7 +122,5 @@ class HHParser(BaseParser):
             page += 1
             time.sleep(REQUEST_DELAY)
 
-        print(
-            f"[{datetime.now()}] Парсинг hh.ru завершен. Найдено {len(vacancies_dto)} вакансий."
-        )
+        logger.info("Парсинг hh.ru завершен. Найдено %d вакансий.", len(vacancies_dto))
         return vacancies_dto
