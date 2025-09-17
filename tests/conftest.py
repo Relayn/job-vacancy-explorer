@@ -36,15 +36,16 @@ def compile_tsvector_for_sqlite(
 
 
 @pytest.fixture(scope="function")
-def setup_test_db() -> Generator[None, None, None]:
+def setup_test_db() -> Generator[Any, None, None]:
     """Фикстура для unit-тестов, зависящих от БД.
 
     Создает таблицы в тестовой БД (SQLite) перед тестом и удаляет их после.
+    Возвращает engine для использования в других фикстурах.
     """
     if not settings.TEST_DATABASE_URL:
         pytest.fail(
             (
-                "TEST_DATABASE_URL is not set. Ensure it's passed via -e flag "
+                "TEST_DATABASE_URL is not set. Ensure it's passed via .env.test "
                 "for unit tests."
             )
         )
@@ -53,7 +54,7 @@ def setup_test_db() -> Generator[None, None, None]:
     assert settings.TEST_DATABASE_URL is not None
     engine = create_engine(settings.TEST_DATABASE_URL)
     Base.metadata.create_all(bind=engine)
-    yield
+    yield engine  # Возвращаем engine
     Base.metadata.drop_all(bind=engine)
 
 

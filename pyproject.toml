@@ -76,7 +76,7 @@ source = ["app", "core", "parsers"]
 
 [tool.coverage.report]
 # Тесты будут падать, если покрытие ниже 90%
-fail_under = 75
+fail_under = 88
 
 [tool.bandit]
 # Исключаем проверку на использование assert (B101),
