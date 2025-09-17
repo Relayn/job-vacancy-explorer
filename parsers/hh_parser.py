@@ -1,4 +1,4 @@
-"""Parser for hh.ru using their official API."""
+"""Парсер для hh.ru с использованием их официального API."""
 
 import logging
 import time

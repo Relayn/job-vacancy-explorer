@@ -1,4 +1,4 @@
-"""Tests for the scheduler module."""
+"""Тесты для модуля планировщика."""
 
 from datetime import datetime
 from unittest.mock import Mock, patch

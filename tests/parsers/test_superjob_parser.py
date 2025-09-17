@@ -1,4 +1,4 @@
-"""Tests for the SuperJobParser."""
+"""Тесты для SuperJobParser."""
 
 from datetime import datetime, timedelta
 from typing import Generator

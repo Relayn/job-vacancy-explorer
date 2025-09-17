@@ -1,4 +1,4 @@
-"""Unit tests for database interaction functions."""
+"""Модульные тесты для функций взаимодействия с базой данных."""
 
 from datetime import datetime
 from typing import Any, Generator
@@ -22,10 +22,10 @@ from parsers.dto import VacancyDTO
 def db_session(
     setup_test_db: Any,
 ) -> Generator[Session, None, None]:
-    """Provide a clean database session for each test.
+    """Предоставляет чистую сессию БД для каждого теста.
 
-    This fixture depends on `setup_test_db` to get the test engine
-    and correctly binds the SessionLocal to it.
+    Фикстура зависит от `setup_test_db`, чтобы получить тестовый движок
+    и корректно привязать к нему SessionLocal.
     """
     test_engine = setup_test_db
     SessionLocal.configure(bind=test_engine)
@@ -38,7 +38,7 @@ def db_session(
 
 @pytest.fixture
 def populate_db(db_session: Session) -> None:
-    """Create a set of vacancies for testing."""
+    """Создает набор вакансий для тестирования."""
     vacancies = [
         Vacancy(
             title="Python Developer",
@@ -90,7 +90,7 @@ def populate_db(db_session: Session) -> None:
 
 
 def test_add_vacancies_from_dto_success(db_session: Session) -> None:
-    """Test adding new, unique DTOs."""
+    """Тест добавления новых, уникальных DTO."""
     dtos = [
         VacancyDTO(
             title="New Vacancy",
@@ -111,7 +111,7 @@ def test_add_vacancies_from_dto_success(db_session: Session) -> None:
 def test_add_vacancies_from_dto_duplicates(
     db_session: Session, populate_db: None
 ) -> None:
-    """Test that duplicate DTOs are ignored."""
+    """Тест того, что дубликаты DTO игнорируются."""
     dtos = [
         VacancyDTO(
             title="Python Developer",
@@ -140,19 +140,19 @@ def test_add_vacancies_from_dto_duplicates(
 
 
 def test_get_unique_sources(db_session: Session, populate_db: None) -> None:
-    """Test retrieving unique, sorted sources."""
+    """Тест получения уникальных, отсортированных источников."""
     sources = get_unique_sources(db_session)
     assert sources == ["hh.ru", "superjob.ru"]
 
 
 def test_get_unique_cities(db_session: Session, populate_db: None) -> None:
-    """Test retrieving unique, sorted cities."""
+    """Тест получения уникальных, отсортированных городов."""
     cities = get_unique_cities(db_session)
     assert cities == ["Moscow", "Remote", "SPb"]
 
 
 def test_get_total_vacancies_count(db_session: Session, populate_db: None) -> None:
-    """Test counting vacancies with and without filters."""
+    """Тест подсчета вакансий с фильтрами и без них."""
     assert get_total_vacancies_count(db_session) == 4
     assert get_total_vacancies_count(db_session, location="Moscow") == 2
     assert get_total_vacancies_count(db_session, company="NonExistent") == 0
@@ -162,7 +162,7 @@ def test_get_total_vacancies_count(db_session: Session, populate_db: None) -> No
 def test_get_filtered_vacancies_by_location(
     db_session: Session, populate_db: None
 ) -> None:
-    """Test filtering by location."""
+    """Тест фильтрации по местоположению."""
     vacancies = get_filtered_vacancies(db_session, location="Moscow")
     assert len(vacancies) == 2
     assert all(v.location == "Moscow" for v in vacancies)
@@ -171,7 +171,7 @@ def test_get_filtered_vacancies_by_location(
 def test_get_filtered_vacancies_by_salary(
     db_session: Session, populate_db: None
 ) -> None:
-    """Test filtering by salary range."""
+    """Тест фильтрации по диапазону зарплаты."""
     # Salary max is >= 150_000
     vacancies_min = get_filtered_vacancies(db_session, salary_min=150000)
     assert len(vacancies_min) == 2
@@ -187,7 +187,7 @@ def test_get_filtered_vacancies_by_salary(
 
 
 def test_get_filtered_vacancies_sorting(db_session: Session, populate_db: None) -> None:
-    """Test sorting by date and salary."""
+    """Тест сортировки по дате и зарплате."""
     # Sort by date (default)
     vacancies_date = get_filtered_vacancies(db_session)
     assert [v.title for v in vacancies_date] == [
@@ -213,7 +213,7 @@ def test_get_filtered_vacancies_sorting(db_session: Session, populate_db: None) 
 def test_get_filtered_vacancies_pagination(
     db_session: Session, populate_db: None
 ) -> None:
-    """Test pagination."""
+    """Тест пагинации."""
     # Get page 2 with 2 items per page (sorted by date desc)
     vacancies = get_filtered_vacancies(db_session, page=2, per_page=2)
     assert len(vacancies) == 2

@@ -1,4 +1,4 @@
-"""Abstract base class for all parsers."""
+"""Абстрактный базовый класс для всех парсеров."""
 
 from abc import ABC, abstractmethod
 from typing import List

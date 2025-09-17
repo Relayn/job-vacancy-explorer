@@ -1,4 +1,4 @@
-"""Alembic environment configuration."""
+"""Конфигурация окружения Alembic."""
 
 import os
 import sys
@@ -30,7 +30,7 @@ config.set_main_option("sqlalchemy.url", settings.database_url)
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode."""
+    """Запускает миграции в режиме 'offline'."""
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
@@ -44,7 +44,7 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode."""
+    """Запускает миграции в режиме 'online'."""
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",

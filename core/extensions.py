@@ -1,9 +1,9 @@
-"""Module for storing Flask extension instances.
+"""Модуль для хранения экземпляров расширений Flask.
 
-This helps to avoid circular imports.
+Помогает избежать циклических импортов.
 """
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
-# Создаем единственный экземпляр планировщика для всего приложения
+# Глобальный экземпляр планировщика для всего приложения
 scheduler = BackgroundScheduler(timezone="Europe/Moscow")

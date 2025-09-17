@@ -1,4 +1,4 @@
-"""Database ORM models."""
+"""Модели базы данных с использованием ORM SQLAlchemy."""
 
 from datetime import datetime
 
@@ -9,13 +9,28 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
-    """Base class for all ORM models."""
+    """Базовый класс для всех ORM-моделей."""
 
     pass
 
 
 class Vacancy(Base):
-    """ORM model for storing vacancies."""
+    """ORM-модель для хранения вакансий.
+
+    Атрибуты:
+        id: Уникальный идентификатор вакансии
+        title: Название вакансии
+        company: Название компании
+        location: Местоположение
+        salary: Зарплата в строковом формате
+        description: Описание вакансии
+        published_at: Дата публикации
+        source: Источник вакансии
+        original_url: Оригинальная ссылка на вакансию
+        salary_min_rub: Минимальная зарплата в рублях
+        salary_max_rub: Максимальная зарплата в рублях
+        tsvector_search: Поле для полнотекстового поиска
+    """
 
     __tablename__ = "vacancies"
 
@@ -29,16 +44,16 @@ class Vacancy(Base):
     source: Mapped[str] = mapped_column(String(50), nullable=False)
     original_url: Mapped[str] = mapped_column(String(512), nullable=False, unique=True)
 
-    # Добавляем поля для нормализованной зарплаты
+    # Поля для нормализованной зарплаты в рублях
     salary_min_rub: Mapped[int] = mapped_column(Integer, nullable=True)
     salary_max_rub: Mapped[int] = mapped_column(Integer, nullable=True)
 
-    # Поле для полнотекстового поиска
+    # Поле для полнотекстового поиска PostgreSQL
     tsvector_search: Mapped[sa.dialects.postgresql.TSVECTOR] = mapped_column(
         TSVECTOR, nullable=True, index=True
     )
 
-    # Уникальный ключ для предотвращения дубликатов
+    # Ограничение уникальности для предотвращения дубликатов вакансий
     __table_args__ = (
         UniqueConstraint(
             "title", "company", "published_at", name="_title_company_published_uc"
@@ -46,5 +61,5 @@ class Vacancy(Base):
     )
 
     def __repr__(self) -> str:
-        """Return a string representation of the Vacancy object."""
+        """Возвращает строковое представление объекта вакансии."""
         return f"<Vacancy(id={self.id}, title='{self.title}')>"

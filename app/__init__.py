@@ -1,4 +1,4 @@
-"""Main application package."""
+"""Главный пакет приложения."""
 
 import logging
 
@@ -9,11 +9,10 @@ from .routes import bp
 
 
 def create_app() -> Flask:
-    """Create and configure an instance of the Flask application.
+    """Создает и настраивает экземпляр Flask-приложения.
 
-    This function acts as a factory for the Flask application. It handles
-    initialization, blueprint registration, and the startup of background
-    services.
+    Эта функция выступает фабрикой приложения Flask. Она выполняет
+    инициализацию, регистрацию блупринтов и запуск фоновых сервисов.
     """
     # --- НАСТРОЙКА ЛОГИРОВАНИЯ ---
     logging.basicConfig(
@@ -28,7 +27,7 @@ def create_app() -> Flask:
     # Регистрация пользовательского фильтра nl2br
     @app.template_filter("nl2br")
     def nl2br_filter(value: str | None) -> Markup:
-        """Convert newlines in a string to HTML <br> tags, ensuring safety."""
+        """Преобразует переводы строк в HTML-теги <br>, обеспечивая безопасность."""
         if not value:
             return Markup("")
         # Сначала экранируем ВСЕ данные, потом безопасно заменяем \n на <br>

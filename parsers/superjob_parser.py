@@ -1,4 +1,4 @@
-"""Parser for superjob.ru using requests and BeautifulSoup."""
+"""Парсер для superjob.ru с использованием requests и BeautifulSoup."""
 
 import logging
 import random
