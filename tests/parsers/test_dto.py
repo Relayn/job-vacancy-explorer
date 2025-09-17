@@ -19,7 +19,7 @@ BASE_DATA = {
 }
 
 
-@given(  # type: ignore[misc]
+@given(
     st.one_of(
         st.none(),
         st.just("по договоренности"),

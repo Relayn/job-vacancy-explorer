@@ -32,7 +32,7 @@ def compile_tsvector_for_sqlite(
     return "TEXT"
 
 
-@pytest.fixture(scope="function")  # type: ignore[misc]
+@pytest.fixture(scope="function")
 def setup_test_db() -> Generator[None, None, None]:
     """Фикстура для unit-тестов, зависящих от БД.
 

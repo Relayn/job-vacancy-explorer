@@ -26,7 +26,7 @@ def create_app() -> Flask:
     app = Flask(__name__)
 
     # Регистрация пользовательского фильтра nl2br
-    @app.template_filter("nl2br")  # type: ignore[misc]
+    @app.template_filter("nl2br")
     def nl2br_filter(value: str | None) -> Markup:
         """Convert newlines in a string to HTML <br> tags, ensuring safety."""
         if not value:

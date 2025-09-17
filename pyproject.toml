@@ -59,6 +59,10 @@ quote-style = "double"
 [tool.mypy]
 # Включаем строгий режим
 strict = true
+# Явно отключаем проверку декораторов, т.к. Flask и Pytest используют
+# динамические декораторы, которые mypy не может проверить без плагинов.
+# Это обеспечивает консистентное поведение локально и в CI.
+disallow_untyped_decorators = false
 # Игнорируем отсутствующие тайп-хинты в сторонних библиотеках
 ignore_missing_imports = true
 plugins = ["pydantic.mypy"]

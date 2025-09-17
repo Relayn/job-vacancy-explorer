@@ -7,7 +7,6 @@ from typing import Any
 
 from flask import (
     Blueprint,
-    Response,
     flash,
     redirect,
     render_template,
@@ -29,7 +28,7 @@ bp = Blueprint("main", __name__)
 logger = logging.getLogger(__name__)
 
 
-@bp.route("/")  # type: ignore[misc]
+@bp.route("/")
 def index() -> Any:
     """Отображает главную страницу со статистикой."""
     with get_db() as db:
@@ -41,7 +40,7 @@ def index() -> Any:
     return render_template("index.html", stats=stats)
 
 
-@bp.route("/vacancies")  # type: ignore[misc]
+@bp.route("/vacancies")
 def vacancies() -> Any:
     """Отображает страницу с вакансиями, фильтрами и пагинацией."""
     error_message = None
@@ -114,8 +113,8 @@ def vacancies() -> Any:
     )
 
 
-@bp.route("/trigger-parse", methods=["POST"])  # type: ignore[misc]
-def trigger_parse() -> Response:
+@bp.route("/trigger-parse", methods=["POST"])
+def trigger_parse() -> Any:
     """Запускает задачу парсинга в фоновом режиме."""
     query = request.form.get("query", "Python")
     if not query:

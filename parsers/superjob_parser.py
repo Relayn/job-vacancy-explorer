@@ -89,10 +89,13 @@ class SuperJobParser(BaseParser):
         try:
             # Название и URL
             title_tag = card.select_one('a[href*="/vakansii/"]')
-            if not title_tag or not isinstance(title_tag.get("href"), str):
+            if not title_tag:
                 return None  # Пропускаем, если нет основной ссылки
+            href_value = title_tag.get("href")
+            if not isinstance(href_value, str):
+                return None
             title = title_tag.text.strip()
-            url = urljoin(SUPERJOB_BASE_URL, title_tag["href"])
+            url = urljoin(SUPERJOB_BASE_URL, href_value)
 
             # Компания
             company_tag = card.select_one("span.f-test-text-vacancy-item-company-name")
@@ -104,7 +107,7 @@ class SuperJobParser(BaseParser):
 
             if location_pin:
                 parent_div = location_pin.find_parent("div")
-                if parent_div:
+                if isinstance(parent_div, Tag):
                     location_tag = parent_div.find("span")
                     if location_tag:
                         location = location_tag.text.strip()
@@ -149,7 +152,8 @@ class SuperJobParser(BaseParser):
         """Основной метод парсинга вакансий с superjob.ru."""
         logger.info("Начало парсинга superjob.ru по запросу: '%s'", search_query)
         vacancies_dto = []
-        encoded_query = quote_plus(search_query)
+        # quote_plus ожидает строку, гарантируем тип
+        encoded_query = quote_plus(str(search_query))
 
         for page_num in range(1, MAX_PAGES + 1):
             search_url = (

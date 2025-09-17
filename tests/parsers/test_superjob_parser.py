@@ -53,7 +53,7 @@ MOCK_HTML_RESPONSE = """
 """
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def mock_requests_get() -> Generator[Mock, None, None]:
     """Фикстура для мокирования requests.get."""
     with patch("requests.Session.get") as mock_get:
