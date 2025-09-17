@@ -1,3 +1,5 @@
+"""Integration tests for database connectivity."""
+
 import pytest
 from sqlalchemy import text
 
@@ -5,10 +7,10 @@ from core.config import settings
 from core.database import get_db
 
 
-@pytest.mark.integration
-def test_postgres_connection():
-    """
-    Проверяет, что приложение может подключиться к PostgreSQL.
+@pytest.mark.integration  # type: ignore[misc]
+def test_postgres_connection() -> None:
+    """Проверяет, что приложение может подключиться к PostgreSQL.
+
     Этот тест должен запускаться в окружении, где настроено
     подключение к реальной БД, а не к тестовой SQLite.
     """

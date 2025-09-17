@@ -1,3 +1,5 @@
+"""Parser for superjob.ru using requests and BeautifulSoup."""
+
 import logging
 import random
 import time
@@ -7,6 +9,7 @@ from urllib.parse import quote_plus, urljoin
 
 import requests
 from bs4 import BeautifulSoup, Tag
+from requests import Session
 
 from core.config import settings
 from parsers.base_parser import BaseParser
@@ -23,8 +26,9 @@ logger = logging.getLogger(__name__)
 class SuperJobParser(BaseParser):
     """Парсер для сайта superjob.ru, использующий requests и BeautifulSoup."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Инициализирует сессию requests и настраивает прокси, если они есть."""
+        self.session: Session = requests.Session()
         self.session.headers.update(
             {
                 "User-Agent": USER_AGENT,
@@ -36,7 +40,7 @@ class SuperJobParser(BaseParser):
         )
         self.proxies = settings.proxy_list_as_array
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Закрывает сессию requests при уничтожении объекта."""
         if hasattr(self, "session"):
             self.session.close()
@@ -45,7 +49,7 @@ class SuperJobParser(BaseParser):
         """Возвращает случайный прокси из списка."""
         if not self.proxies:
             return None
-        proxy_url = random.choice(self.proxies)
+        proxy_url = random.choice(self.proxies)  # nosec B311
         return {"http": proxy_url, "https": proxy_url}
 
     def _parse_date(self, date_str: str) -> datetime:
@@ -85,7 +89,7 @@ class SuperJobParser(BaseParser):
         try:
             # Название и URL
             title_tag = card.select_one('a[href*="/vakansii/"]')
-            if not title_tag:
+            if not title_tag or not isinstance(title_tag.get("href"), str):
                 return None  # Пропускаем, если нет основной ссылки
             title = title_tag.text.strip()
             url = urljoin(SUPERJOB_BASE_URL, title_tag["href"])
@@ -99,9 +103,11 @@ class SuperJobParser(BaseParser):
             location = "Не указан"
 
             if location_pin:
-                location_tag = location_pin.find_next("span")
-                if location_tag:
-                    location = location_tag.text.strip()
+                parent_div = location_pin.find_parent("div")
+                if parent_div:
+                    location_tag = parent_div.find("span")
+                    if location_tag:
+                        location = location_tag.text.strip()
 
             # Зарплата
             salary_tag = card.select_one(".f-test-text-company-item-salary")

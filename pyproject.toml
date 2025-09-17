@@ -29,6 +29,14 @@ black = "^24.8.0"
 pytest = "^8.3.2"
 pre-commit = "^4.2.0"
 pytest-dotenv = "^0.5.2"
+mypy = "^1.18.1"
+bandit = "^1.8.6"
+radon = "^6.0.1"
+hypothesis = "^6.138.17"
+pip-audit = "^2.9.0"
+safety = "^3.6.1"
+pytest-cov = "^7.0.0"
+types-requests = "^2.32.4.20250913"
 
 [build-system]
 requires = ["poetry-core"]
@@ -38,7 +46,30 @@ build-backend = "poetry.core.masonry.api"
 line-length = 88
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I"]
+# Добавляем "D" для проверки докстрингов (pydocstyle)
+select = ["E", "F", "W", "I", "D"]
+
+[tool.ruff.lint.pydocstyle]
+# Указываем стиль докстрингов
+convention = "google"
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.mypy]
+# Включаем строгий режим
+strict = true
+# Игнорируем отсутствующие тайп-хинты в сторонних библиотеках
+ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
+# Исключаем директорию с авто-генерируемыми файлами миграций,
+# т.к. mypy не может корректно их анализировать.
+exclude = ["alembic/"]
+
+[tool.coverage.run]
+# Указываем, какие директории нужно включать в отчет о покрытии
+source = ["app", "core", "parsers"]
+
+[tool.coverage.report]
+# Тесты будут падать, если покрытие ниже 90%
+fail_under = 90

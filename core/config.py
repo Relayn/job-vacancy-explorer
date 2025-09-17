@@ -1,3 +1,5 @@
+"""Application configuration settings."""
+
 import json
 from typing import Dict, List, Optional
 
@@ -6,9 +8,9 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    """
-    Класс для управления настройками приложения.
-    Загружает переменные из .env файла.
+    """Manage application settings.
+
+    Loads variables from an .env file.
     """
 
     # Настройки базы данных PostgreSQL (теперь опциональные)
@@ -37,9 +39,13 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_db_settings(self) -> "Settings":
-        """
-        Проверяет, что если не используется тестовая БД, то все
-        настройки для основной БД присутствуют.
+        """Validate that if not using a test DB, all main DB settings are present.
+
+        Returns:
+            The validated Settings instance.
+
+        Raises:
+            ValueError: If required database settings are missing.
         """
         if self.TEST_DATABASE_URL:
             # Если используется тестовая БД, остальные проверки не нужны
@@ -56,14 +62,18 @@ class Settings(BaseSettings):
                 f"обязательны: {', '.join(missing_fields)}"
             )
             raise ValueError(msg)
+        return self
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def database_url(self) -> str:
-        """
-        Возвращает URL для подключения к базе данных SQLAlchemy.
-        Использует диалект 'psycopg' для psycopg v3.
-        Если установлена переменная TEST_DATABASE_URL, используется она.
+        """Return the SQLAlchemy database URL.
+
+        Uses the 'psycopg' dialect for psycopg v3. If TEST_DATABASE_URL is
+        set, it will be used instead.
+
+        Returns:
+            The database connection URL string.
         """
         if self.TEST_DATABASE_URL:
             return self.TEST_DATABASE_URL
@@ -79,23 +89,29 @@ class Settings(BaseSettings):
 
         return f"postgresql+psycopg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def proxy_list_as_array(self) -> List[str]:
-        """
-        Возвращает список прокси из строки PROXY_LIST.
-        Обрабатывает пустые значения и лишние пробелы.
+        """Return a list of proxies from the PROXY_LIST string.
+
+        Handles empty values and extra whitespace.
+
+        Returns:
+            A list of proxy URLs.
         """
         if not self.PROXY_LIST:
             return []
         return [proxy.strip() for proxy in self.PROXY_LIST.split(",") if proxy.strip()]
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def currency_rates(self) -> Dict[str, float]:
-        """
-        Парсит строку CURRENCY_RATES_JSON в словарь курсов валют.
-        Возвращает словарь по умолчанию в случае ошибки парсинга.
+        """Parse the CURRENCY_RATES_JSON string into a dictionary.
+
+        Returns a default dictionary in case of a parsing error.
+
+        Returns:
+            A dictionary of currency rates.
         """
         try:
             rates = json.loads(self.CURRENCY_RATES_JSON)

@@ -3,7 +3,7 @@ name: CI Pipeline
 on: [push, pull_request]
 
 jobs:
-  lint:
+  lint-and-static-analysis:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -20,15 +20,18 @@ jobs:
       - name: Install dependencies
         run: poetry install --with dev
 
-      - name: Run Black
-        run: poetry run black --check .
+      - name: Run Ruff Formatter Check
+        run: poetry run ruff format --check .
 
-      - name: Run Ruff
+      - name: Run Ruff Linter
         run: poetry run ruff check .
+
+      - name: Run Mypy
+        run: poetry run mypy .
 
   unit-test:
     runs-on: ubuntu-latest
-    needs: lint
+    needs: lint-and-static-analysis
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -44,14 +47,38 @@ jobs:
       - name: Install dependencies
         run: poetry install --with dev
 
-      - name: Run unit tests
+      - name: Run unit tests with coverage
         env:
           TEST_DATABASE_URL: "sqlite:///:memory:"
-        run: poetry run pytest -m "not integration"
+        # Добавляем флаги для проверки покрытия с порогом 90%
+        run: poetry run pytest --cov --cov-report=term-missing --cov-fail-under=90 -m "not integration"
+
+  security-and-quality:
+    runs-on: ubuntu-latest
+    needs: lint-and-static-analysis
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install Poetry
+        run: pip install poetry
+      - name: Install dependencies
+        run: poetry install --with dev
+      - name: Run Bandit (SAST)
+        run: poetry run bandit -r . -s B101
+      - name: Run Radon (Code Complexity)
+        run: poetry run radon mi . -i .venv
+      - name: Run pip-audit (Dependency Vulnerabilities)
+        run: poetry run pip-audit
+      - name: Run safety (Dependency Vulnerabilities)
+        run: poetry run safety check
 
   integration-test:
     runs-on: ubuntu-latest
-    needs: unit-test
+    needs: [unit-test, security-and-quality]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -60,26 +87,15 @@ jobs:
         run: cp .env.example .env
 
       - name: Start services
-        env:
-          # Эти переменные используются docker-compose для настройки контейнера с БД
-          POSTGRES_USER: user
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: vacancies_db
         run: docker compose up -d
 
       - name: Wait for PostgreSQL to be healthy
         run: |
-          echo "Ожидание готовности PostgreSQL..."
-          # Ждем до 30 секунд, пока healthcheck в docker-compose.yml не вернет статус 'healthy'
           timeout 30s bash -c 'until docker ps | grep vacancies_db | grep -q "(healthy)"; do sleep 2; done'
-          echo "PostgreSQL готов!"
 
       - name: Run integration tests
-        # Запускаем pytest только для директории tests/integration
-        # Флаг -T нужен для неинтерактивного выполнения в CI
         run: docker compose exec -T app poetry run pytest -m "integration"
 
       - name: Stop services
-        # Этот шаг выполнится всегда, даже если тесты упали
         if: always()
         run: docker compose down

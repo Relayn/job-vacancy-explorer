@@ -1,8 +1,19 @@
+"""This module defines the main routes for the Flask application."""
+
 import logging
 from datetime import datetime
 from math import ceil
+from typing import Any
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import (
+    Blueprint,
+    Response,
+    flash,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 
 from core.database import (
     get_db,
@@ -18,11 +29,11 @@ bp = Blueprint("main", __name__)
 logger = logging.getLogger(__name__)
 
 
-@bp.route("/")
-def index():
+@bp.route("/")  # type: ignore[misc]
+def index() -> Any:
     """Отображает главную страницу со статистикой."""
     with get_db() as db:
-        stats = {
+        stats: dict[str, Any] = {
             "total_vacancies": get_total_vacancies_count(db),
             "sources_count": len(get_unique_sources(db)),
             "cities_count": len(get_unique_cities(db)),
@@ -30,8 +41,8 @@ def index():
     return render_template("index.html", stats=stats)
 
 
-@bp.route("/vacancies")
-def vacancies():
+@bp.route("/vacancies")  # type: ignore[misc]
+def vacancies() -> Any:
     """Отображает страницу с вакансиями, фильтрами и пагинацией."""
     error_message = None
     try:
@@ -48,8 +59,8 @@ def vacancies():
         sort_by = "salary" if sort == "salary" else "published_at"
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 20, type=int)
-        page = max(1, page)
-        per_page = max(10, min(100, per_page))
+        page = max(1, page or 1)
+        per_page = max(10, min(100, per_page or 20))
 
         with get_db() as db:
             current_vacancies = get_filtered_vacancies(
@@ -103,8 +114,8 @@ def vacancies():
     )
 
 
-@bp.route("/trigger-parse", methods=["POST"])
-def trigger_parse():
+@bp.route("/trigger-parse", methods=["POST"])  # type: ignore[misc]
+def trigger_parse() -> Response:
     """Запускает задачу парсинга в фоновом режиме."""
     query = request.form.get("query", "Python")
     if not query:

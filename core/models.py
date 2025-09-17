@@ -1,19 +1,21 @@
-import sqlalchemy as sa
+"""Database ORM models."""
+
 from datetime import datetime
 
+import sqlalchemy as sa
 from sqlalchemy import DateTime, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
-    """Базовый класс для всех ORM-моделей."""
+    """Base class for all ORM models."""
 
     pass
 
 
 class Vacancy(Base):
-    """ORM-модель для хранения вакансий."""
+    """ORM model for storing vacancies."""
 
     __tablename__ = "vacancies"
 
@@ -43,5 +45,6 @@ class Vacancy(Base):
         ),
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        """Return a string representation of the Vacancy object."""
         return f"<Vacancy(id={self.id}, title='{self.title}')>"

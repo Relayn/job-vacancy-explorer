@@ -1,3 +1,5 @@
+"""Abstract base class for all parsers."""
+
 from abc import ABC, abstractmethod
 from typing import List
 
@@ -9,8 +11,7 @@ class BaseParser(ABC):
 
     @abstractmethod
     def parse(self, search_query: str) -> List[VacancyDTO]:
-        """
-        Абстрактный метод для парсинга вакансий.
+        """Абстрактный метод для парсинга вакансий.
 
         Args:
             search_query: Поисковый запрос (например, "Python Developer").

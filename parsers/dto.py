@@ -1,3 +1,5 @@
+"""Data Transfer Objects (DTOs) for the application."""
+
 import re
 from datetime import datetime
 from typing import Any, Dict, Optional
@@ -8,7 +10,7 @@ from core.config import settings
 
 
 class VacancyDTO(BaseModel):
-    """Data Transfer Object для вакансий."""
+    """Data Transfer Object for vacancies."""
 
     title: str
     company: str
@@ -23,9 +25,9 @@ class VacancyDTO(BaseModel):
 
     @model_validator(mode="before")
     def normalize_salary(cls, values: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Нормализует строковое представление зарплаты в числовые значения в рублях.
-        Этот валидатор запускается до создания модели.
+        """Normalize the salary string into numeric RUB values.
+
+        This validator runs before the model is created.
         """
         salary_str = values.get("salary")
         if not salary_str or "по договоренности" in salary_str.lower():

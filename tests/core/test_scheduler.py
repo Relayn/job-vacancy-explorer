@@ -1,8 +1,10 @@
+"""Tests for the scheduler module."""
+
 from datetime import datetime
 from unittest.mock import Mock, patch
 
-from parsers.dto import VacancyDTO
 from core.scheduler import update_vacancies
+from parsers.dto import VacancyDTO
 
 
 @patch("core.scheduler.get_db")
@@ -10,11 +12,12 @@ from core.scheduler import update_vacancies
 @patch("core.scheduler.SuperJobParser")
 @patch("core.scheduler.HHParser")
 def test_update_vacancies_success(
-    MockHHParser, MockSuperJobParser, mock_add_vacancies, mock_get_db
-):
-    """
-    Тест успешного выполнения задачи обновления вакансий.
-    """
+    MockHHParser: Mock,
+    MockSuperJobParser: Mock,
+    mock_add_vacancies: Mock,
+    mock_get_db: Mock,
+) -> None:
+    """Тест успешного выполнения задачи обновления вакансий."""
     # 1. Настраиваем мок парсера
     mock_parser_instance = MockHHParser.return_value
     mock_dto_list = [
@@ -64,15 +67,13 @@ def test_update_vacancies_success(
 @patch("core.scheduler.SuperJobParser")
 @patch("core.scheduler.HHParser")
 def test_update_vacancies_no_vacancies_found(
-    MockHHParser,
-    MockSuperJobParser,
-    mock_add_vacancies,
-    mock_get_db,
-    setup_test_db,
-):
-    """
-    Тест сценария, когда парсер не нашел ни одной вакансии.
-    """
+    MockHHParser: Mock,
+    MockSuperJobParser: Mock,
+    mock_add_vacancies: Mock,
+    mock_get_db: Mock,
+    setup_test_db: None,
+) -> None:
+    """Тест сценария, когда парсер не нашел ни одной вакансии."""
     # Парсеры возвращают пустые списки
     MockHHParser.return_value.parse.return_value = []
     MockSuperJobParser.return_value.parse.return_value = []

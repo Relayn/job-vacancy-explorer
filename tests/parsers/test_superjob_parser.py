@@ -1,4 +1,7 @@
+"""Tests for the SuperJobParser."""
+
 from datetime import datetime, timedelta
+from typing import Generator
 from unittest.mock import Mock, patch
 
 import pytest
@@ -12,8 +15,12 @@ MOCK_HTML_RESPONSE = """
 <div>
     <!-- 1. Валидная вакансия 1 -->
     <div class="f-test-search-result-item">
-        <a href="/vakansii/stazher-inzhener-po-avtomatizacii-testirovaniya-50728083.html">Стажер-инженер по автоматизации тестирования</a>
-        <span class="f-test-text-vacancy-item-company-name">OZON: Старт карьеры</span>
+        <a href="/vakansii/stazher-50728083.html">
+            Стажер-инженер по автоматизации тестирования
+        </a>
+        <span class="f-test-text-vacancy-item-company-name">
+            OZON: Старт карьеры
+        </span>
         <div><svg><use href="#pin"></use></svg><span>Москва</span></div>
         <div class="f-test-text-company-item-salary">По договорённости</div>
         <span class="_2Q1BH _3doCL _2eclS">Вчера</span>
@@ -22,9 +29,14 @@ MOCK_HTML_RESPONSE = """
 
     <!-- 2. Валидная вакансия 2 -->
     <div class="f-test-search-result-item">
-        <a href="/vakansii/veduschij-specialist-informacionnoj-bezopasnosti-49825266.html">Ведущий специалист ИБ</a>
+        <a href="/vakansii/veduschij-specialist-ib-49825266.html">
+            Ведущий специалист ИБ
+        </a>
         <span class="f-test-text-vacancy-item-company-name">РТРС</span>
-        <div><svg><use href="#pin"></use></svg><span>Москва, улица Академика Королёва</span></div>
+        <div>
+            <svg><use href="#pin"></use></svg>
+            <span>Москва, улица Академика Королёва</span>
+        </div>
         <div class="f-test-text-company-item-salary">от 100 000 ₽</div>
         <span class="_2Q1BH _3doCL _2eclS">Сегодня</span>
         <span class="_2Q1BH _3doCL _2k8ZM rtYnN sPJuZ">Описание для РТРС.</span>
@@ -41,8 +53,8 @@ MOCK_HTML_RESPONSE = """
 """
 
 
-@pytest.fixture
-def mock_requests_get():
+@pytest.fixture  # type: ignore[misc]
+def mock_requests_get() -> Generator[Mock, None, None]:
     """Фикстура для мокирования requests.get."""
     with patch("requests.Session.get") as mock_get:
         mock_response = Mock()
@@ -53,7 +65,7 @@ def mock_requests_get():
 
 
 @patch("parsers.superjob_parser.MAX_PAGES", 1)  # Ограничиваем тест одной страницей
-def test_superjob_parser_success(mock_requests_get):
+def test_superjob_parser_success(mock_requests_get: Mock) -> None:
     """Тест успешного парсинга вакансий."""
     # Arrange
     parser = SuperJobParser()
@@ -82,7 +94,7 @@ def test_superjob_parser_success(mock_requests_get):
 
 
 @patch("parsers.superjob_parser.datetime")
-def test_date_parsing(mock_datetime_class):
+def test_date_parsing(mock_datetime_class: Mock) -> None:
     """Тест внутреннего метода парсинга дат."""
     # Arrange
     # Сохраняем настоящий класс datetime, чтобы использовать его конструктор
@@ -107,7 +119,7 @@ def test_date_parsing(mock_datetime_class):
     )  # Возврат текущей даты, если формат не распознан
 
 
-def test_superjob_parser_network_error():
+def test_superjob_parser_network_error() -> None:
     """Тест обработки ошибки сети."""
     # Arrange
     with patch(

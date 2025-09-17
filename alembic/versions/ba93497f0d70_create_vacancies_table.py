@@ -1,4 +1,4 @@
-"""Create vacancies table
+"""Create vacancies table.
 
 Revision ID: ba93497f0d70
 Revises:
@@ -6,11 +6,13 @@ Create Date: 2025-07-02 14:24:59.764736
 
 """
 
-from typing import Sequence, Union
+from typing import Any, Sequence, Union, cast
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op as _alembic_op  # type: ignore[attr-defined]
+
+op = cast(Any, _alembic_op)
 
 # revision identifiers, used by Alembic.
 revision: str = "ba93497f0d70"

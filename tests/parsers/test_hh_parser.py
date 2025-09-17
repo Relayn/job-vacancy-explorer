@@ -1,4 +1,7 @@
+"""Tests for the HHParser."""
+
 from datetime import datetime
+from typing import Any, Dict, Generator
 from unittest.mock import Mock, patch
 
 import pytest
@@ -8,7 +11,7 @@ from parsers.dto import VacancyDTO
 from parsers.hh_parser import HHParser
 
 # Мок-ответ от API hh.ru для тестов
-MOCK_API_RESPONSE = {
+MOCK_API_RESPONSE: Dict[str, Any] = {
     "items": [
         {
             "id": "1",
@@ -39,8 +42,8 @@ MOCK_API_RESPONSE = {
 }
 
 
-@pytest.fixture
-def mock_requests_get():
+@pytest.fixture  # type: ignore[misc]
+def mock_requests_get() -> Generator[Mock, None, None]:
     """Фикстура для мокирования requests.get."""
     with patch("requests.Session.get") as mock_get:
         mock_response = Mock()
@@ -50,7 +53,7 @@ def mock_requests_get():
         yield mock_get
 
 
-def test_hh_parser_success(mock_requests_get):
+def test_hh_parser_success(mock_requests_get: Mock) -> None:
     """Тест успешного парсинга вакансий."""
     # Arrange
     parser = HHParser()
@@ -69,6 +72,7 @@ def test_hh_parser_success(mock_requests_get):
     assert v1.company == "Test Company 1"
     assert v1.location == "Moscow"
     assert v1.salary == "от 100000 до 150000 RUR"
+    assert v1.description is not None  # Проверка, что описание не None
     assert "Experience with Python" in v1.description  # Проверяем очистку от тегов
     assert v1.published_at == datetime.fromisoformat("2025-07-01T10:00:00+03:00")
     assert v1.source == "hh.ru"
@@ -80,7 +84,7 @@ def test_hh_parser_success(mock_requests_get):
     assert v2.salary is None
 
 
-def test_hh_parser_api_error(mock_requests_get):
+def test_hh_parser_api_error(mock_requests_get: Mock) -> None:
     """Тест обработки ошибки от API."""
     # Arrange
     mock_requests_get.side_effect = requests.RequestException("API is down")
@@ -93,7 +97,7 @@ def test_hh_parser_api_error(mock_requests_get):
     assert len(vacancies) == 0
 
 
-def test_hh_parser_malformed_item(mock_requests_get):
+def test_hh_parser_malformed_item(mock_requests_get: Mock) -> None:
     """Тест на пропуск вакансии с некорректными данными."""
     # Arrange
     malformed_response = {

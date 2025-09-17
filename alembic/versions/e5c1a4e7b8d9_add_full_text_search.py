@@ -1,4 +1,4 @@
-"""Add full text search
+"""Add full text search.
 
 Revision ID: e5c1a4e7b8d9
 Revises: ba93497f0d70
@@ -6,10 +6,14 @@ Create Date: 2025-07-04 10:30:15.123456
 
 """
 
-from typing import Sequence, Union
+from typing import Any, Sequence, Union, cast
 
 import sqlalchemy as sa
-from alembic import op
+from sqlalchemy.dialects import postgresql as pg
+
+from alembic import op as _alembic_op  # type: ignore[attr-defined]
+
+op = cast(Any, _alembic_op)
 
 # revision identifiers, used by Alembic.
 revision: str = "e5c1a4e7b8d9"
@@ -31,7 +35,7 @@ def upgrade() -> None:
         "vacancies",
         sa.Column(
             "tsvector_search",
-            sa.dialects.postgresql.TSVECTOR(),
+            cast(Any, pg.TSVECTOR)(),
             nullable=True,
             comment="TSVECTOR for full-text search on title and description",
         ),

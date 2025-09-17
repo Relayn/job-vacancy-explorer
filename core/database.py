@@ -6,6 +6,7 @@ from typing import Generator, List, Optional
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.sql.elements import ColumnElement
 
 from core.config import settings
 from core.models import Vacancy
@@ -18,12 +19,13 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 @contextmanager
 def get_db() -> Generator[Session, None, None]:
-    """
-    Контекстный менеджер для получения сессии базы данных.
-    Гарантирует, что сессия будет закрыта после использования.
+    """Get a database session as a context manager.
+
+    This function provides a transactional scope around a series of
+    operations. It ensures that the session is properly closed after use.
 
     Yields:
-        Session: Экземпляр сессии SQLAlchemy.
+        Session: An instance of the SQLAlchemy session.
     """
     db = SessionLocal()
     try:
@@ -33,16 +35,17 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def add_vacancies_from_dto(db: Session, vacancies_dto: List[VacancyDTO]) -> int:
-    """
-    Добавляет список вакансий в базу данных из DTO.
-    Использует PostgreSQL-специфичный ON CONFLICT DO NOTHING для игнорирования дубликатов.
+    """Add a list of vacancies to the database from DTOs.
+
+    Uses a PostgreSQL-specific ON CONFLICT DO NOTHING clause to efficiently
+    ignore duplicate entries based on the 'original_url' unique constraint.
 
     Args:
-        db: Сессия SQLAlchemy.
-        vacancies_dto: Список DTO вакансий.
+        db: The SQLAlchemy session.
+        vacancies_dto: A list of VacancyDTO objects.
 
     Returns:
-        Количество успешно добавленных (новых) вакансий.
+        The number of newly inserted vacancies.
     """
     if not vacancies_dto:
         return 0
@@ -72,28 +75,29 @@ def get_filtered_vacancies(
     sort_by: str = "published_at",
     sort_order: str = "desc",
 ) -> List[Vacancy]:
-    """
-    Получает отфильтрованный и отсортированный список вакансий из БД с пагинацией.
-    Использует полнотекстовый поиск PostgreSQL для поля 'query'.
+    """Retrieve a paginated, filtered, and sorted list of vacancies.
+
+    This function uses PostgreSQL's full-text search capabilities for the
+    'query' field and provides extensive filtering and sorting options.
 
     Args:
-        db: Сессия SQLAlchemy.
-        page: Номер страницы.
-        per_page: Количество элементов на странице.
-        query: Текст для полнотекстового поиска.
-        location: Фильтр по местоположению.
-        company: Фильтр по компании.
-        salary_min: Минимальная зарплата.
-        salary_max: Максимальная зарплата.
-        source: Фильтр по источнику.
-        sort_by: Поле для сортировки ('published_at' или 'salary_max_rub').
-        sort_order: Направление сортировки ('asc' или 'desc').
+        db: The SQLAlchemy session.
+        page: The page number to retrieve.
+        per_page: The number of items per page.
+        query: The text for full-text search.
+        location: The location to filter by.
+        company: The company name to filter by.
+        salary_min: The minimum salary to filter by.
+        salary_max: The maximum salary to filter by.
+        source: The vacancy source to filter by.
+        sort_by: The field to sort by ('published_at' or 'salary').
+        sort_order: The sort direction ('asc' or 'desc').
 
     Returns:
-        Список ORM-объектов Vacancy.
+        A list of Vacancy ORM objects.
     """
     stmt = select(Vacancy)
-    filters = []
+    filters: list[ColumnElement[bool]] = []
 
     if query:
         stmt = stmt.where(
@@ -112,8 +116,8 @@ def get_filtered_vacancies(
     if salary_max is not None:
         filters.append(Vacancy.salary_min_rub <= salary_max)
 
-    if filters:
-        stmt = stmt.where(*filters)
+    for filter_clause in filters:
+        stmt = stmt.where(filter_clause)
 
     order_field = (
         Vacancy.salary_max_rub if sort_by == "salary" else Vacancy.published_at
@@ -137,7 +141,7 @@ def get_filtered_vacancies(
     stmt = stmt.offset(offset).limit(per_page)
 
     result = db.execute(stmt)
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 def get_total_vacancies_count(
@@ -149,19 +153,22 @@ def get_total_vacancies_count(
     salary_max: Optional[int] = None,
     source: Optional[str] = None,
 ) -> int:
-    """
-    Возвращает общее количество вакансий, соответствующих фильтрам.
-    Использует полнотекстовый поиск PostgreSQL для поля 'query'.
+    """Return the total number of vacancies matching the given filters.
 
     Args:
-        db: Сессия SQLAlchemy.
-        (остальные параметры аналогичны get_filtered_vacancies)
+        db: The SQLAlchemy session.
+        query: The text for full-text search.
+        location: The location to filter by.
+        company: The company name to filter by.
+        salary_min: The minimum salary to filter by.
+        salary_max: The maximum salary to filter by.
+        source: The vacancy source to filter by.
 
     Returns:
-        Общее количество вакансий.
+        The total count of matching vacancies.
     """
     stmt = select(func.count()).select_from(Vacancy)
-    filters = []
+    filters: list[ColumnElement[bool]] = []
 
     if query:
         stmt = stmt.where(
@@ -179,22 +186,24 @@ def get_total_vacancies_count(
     if salary_max is not None:
         filters.append(Vacancy.salary_min_rub <= salary_max)
 
-    if filters:
-        stmt = stmt.where(*filters)
+    for filter_clause in filters:
+        stmt = stmt.where(filter_clause)
 
     result = db.execute(stmt)
-    return result.scalar_one()
+    count = result.scalar_one()
+    assert count is not None
+    return count
 
 
 def get_unique_sources(db: Session) -> List[str]:
-    """Возвращает список уникальных источников вакансий."""
+    """Return a list of unique vacancy sources."""
     stmt = select(Vacancy.source).distinct().order_by(Vacancy.source)
     result = db.execute(stmt)
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 def get_unique_cities(db: Session) -> List[str]:
-    """Возвращает список уникальных городов из вакансий."""
+    """Return a list of unique cities from vacancies."""
     stmt = (
         select(Vacancy.location)
         .distinct()
@@ -202,4 +211,4 @@ def get_unique_cities(db: Session) -> List[str]:
         .order_by(Vacancy.location)
     )
     result = db.execute(stmt)
-    return result.scalars().all()
+    return list(result.scalars().all())

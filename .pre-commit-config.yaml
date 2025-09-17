@@ -9,10 +9,26 @@ repos:
     -   id: trailing-whitespace
 
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.13.0 # Используем ту же версию, что и в pyproject.toml
+    rev: v0.13.0
     hooks:
-        # 1. Хук для линтинга с авто-исправлением
         - id: ruff
           args: [ --fix ]
-        # 2. Хук для форматирования
         - id: ruff-format
+
+-   repo: https://github.com/pycqa/bandit
+    rev: 1.8.6
+    hooks:
+      - id: bandit
+        args: ["-s", "B101"] # Исключаем assert'ы, так как они используются в тестах
+
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.18.1
+    hooks:
+        - id: mypy
+          args: ["--exclude", "alembic/"] # Явно исключаем директорию с миграциями
+            # Передаем доп. зависимости mypy, если они нужны для анализа
+          additional_dependencies:
+              - "pydantic"
+              - "pydantic-settings"
+              - "sqlalchemy"
+              - "types-requests"

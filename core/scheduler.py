@@ -1,3 +1,5 @@
+"""Background task scheduler and job definitions."""
+
 import logging
 from datetime import datetime
 
@@ -14,8 +16,8 @@ from parsers.superjob_parser import SuperJobParser
 logger = logging.getLogger(__name__)
 
 
-def update_vacancies(search_query: str = "Python"):
-    """Обновляет вакансии в базе данных, последовательно запуская все парсеры."""
+def update_vacancies(search_query: str = "Python") -> None:
+    """Update vacancies in the database by running all available parsers."""
     logger.info("Запуск задачи обновления вакансий по запросу: '%s'...", search_query)
     parsers = [HHParser, SuperJobParser]
     all_vacancies_dto = []
@@ -49,11 +51,8 @@ def update_vacancies(search_query: str = "Python"):
         logger.error("Ошибка при сохранении вакансий в БД: %s", e, exc_info=True)
 
 
-def start_scheduler():
-    """
-    Добавляет периодическую задачу и запускает планировщик,
-    если он еще не запущен.
-    """
+def start_scheduler() -> None:
+    """Add the periodic job and start the scheduler if it's not running."""
     if not scheduler.get_job("update_vacancies_job"):
         scheduler.add_job(
             update_vacancies,

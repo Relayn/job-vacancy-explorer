@@ -1,18 +1,23 @@
+"""Alembic environment configuration."""
+
 import os
 import sys
 from logging.config import fileConfig
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from alembic import context
+from typing import Any, cast
+
 from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
 
+from alembic import context as _alembic_context  # type: ignore[attr-defined]
 from core.config import settings
 from core.models import Base
 
 load_dotenv()
 
+context = cast(Any, _alembic_context)
 config = context.config
 
 if config.config_file_name is not None:
