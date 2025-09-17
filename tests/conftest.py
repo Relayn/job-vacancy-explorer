@@ -6,6 +6,8 @@ from typing import Any, Generator
 
 # --- Импорты сторонних библиотек ---
 import pytest
+from flask import Flask
+from flask.testing import FlaskClient
 from sqlalchemy import create_engine
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.compiler import compiles
@@ -19,6 +21,7 @@ if project_root not in sys.path:
 
 
 # --- Импорты локальных модулей приложения ---
+from app import create_app  # noqa: E402
 from core.config import settings  # noqa: E402
 from core.models import Base  # noqa: E402
 
@@ -52,3 +55,22 @@ def setup_test_db() -> Generator[None, None, None]:
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture(scope="module")
+def app() -> Generator[Flask, None, None]:
+    """Фикстура для создания экземпляра приложения Flask для тестов."""
+    _app = create_app()
+    _app.config.update(
+        {
+            "TESTING": True,
+            "SECRET_KEY": "test_secret_key",  # Устанавливаем ключ для тестов
+        }
+    )
+    yield _app
+
+
+@pytest.fixture(scope="module")
+def client(app: Flask) -> FlaskClient:
+    """Фикстура, предоставляющая тестовый клиент Flask."""
+    return app.test_client()

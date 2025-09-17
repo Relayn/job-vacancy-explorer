@@ -22,3 +22,7 @@ venv/
 !.env.local.example
 .env.local
 .env.test
+
+# Testing & Coverage
+.coverage
+.hypothesis/
