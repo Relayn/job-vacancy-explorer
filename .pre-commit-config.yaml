@@ -19,7 +19,14 @@ repos:
     rev: 1.8.6
     hooks:
       - id: bandit
-        args: ["-s", "B101"] # Исключаем assert'ы, так как они используются в тестах
+        # Явно указываем интерпретатор с флагом UTF-8 для решения проблемы в Windows.
+        entry: python -X utf8 -m bandit
+        # Явно указываем путь к файлу конфигурации, так как смена 'entry'
+        # ломает авто-обнаружение pyproject.toml.
+        args: ["-c", "pyproject.toml"]
+        # Указываем, что это Python-хук и он должен работать с python-файлами.
+        language: python
+        types: [python]
 
 -   repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.18.1

@@ -68,7 +68,7 @@ jobs:
       - name: Install dependencies
         run: poetry install --with dev
       - name: Run Bandit (SAST)
-        run: poetry run bandit -r . -s B101
+        run: poetry run bandit -r .
       - name: Run Radon (Code Complexity)
         run: poetry run radon mi . -i .venv
       - name: Run pip-audit (Dependency Vulnerabilities)
