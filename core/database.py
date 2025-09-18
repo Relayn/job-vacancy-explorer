@@ -1,4 +1,7 @@
-"""Модуль для взаимодействия с базой данных с использованием SQLAlchemy ORM."""
+"""Модуль для взаимодействия с базой данных с использованием SQLAlchemy ORM.
+
+Содержит функции для работы с вакансиями, включая добавление, поиск и фильтрацию.
+"""
 
 from contextlib import contextmanager
 from typing import Generator, List, Optional
@@ -12,20 +15,20 @@ from core.config import settings
 from core.models import Vacancy
 from parsers.dto import VacancyDTO
 
-# Создаем engine и sessionmaker для всего приложения
+# Создаем engine и sessionmaker для всего приложения один раз при инициализации
 engine = create_engine(settings.database_url, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 @contextmanager
 def get_db() -> Generator[Session, None, None]:
-    """Get a database session as a context manager.
+    """Возвращает сессию базы данных в виде контекстного менеджера.
 
-    This function provides a transactional scope around a series of
-    operations. It ensures that the session is properly closed after use.
+    Обеспечивает транзакционную область видимости для серии операций.
+    Гарантирует корректное закрытие сессии после использования.
 
     Yields:
-        Session: An instance of the SQLAlchemy session.
+        Session: Экземпляр сессии SQLAlchemy.
     """
     db = SessionLocal()
     try:
@@ -35,17 +38,18 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def add_vacancies_from_dto(db: Session, vacancies_dto: List[VacancyDTO]) -> int:
-    """Add a list of vacancies to the database from DTOs.
+    """Добавляет список вакансий в базу данных из DTO-объектов.
 
-    Uses a PostgreSQL-specific ON CONFLICT DO NOTHING clause to efficiently
-    ignore duplicate entries based on the 'original_url' unique constraint.
+    Использует специфичное для PostgreSQL выражение ON CONFLICT DO NOTHING
+    для эффективного пропуска дубликатов на основе ограничения
+    уникальности 'original_url'.
 
     Args:
-        db: The SQLAlchemy session.
-        vacancies_dto: A list of VacancyDTO objects.
+        db: Сессия SQLAlchemy.
+        vacancies_dto: Список объектов VacancyDTO.
 
     Returns:
-        The number of newly inserted vacancies.
+        Количество вставленных вакансий.
     """
     if not vacancies_dto:
         return 0
@@ -75,26 +79,26 @@ def get_filtered_vacancies(
     sort_by: str = "published_at",
     sort_order: str = "desc",
 ) -> List[Vacancy]:
-    """Retrieve a paginated, filtered, and sorted list of vacancies.
+    """Получает отфильтрованный, отсортированный и разбитый на страницы список вакансий.
 
-    This function uses PostgreSQL's full-text search capabilities for the
-    'query' field and provides extensive filtering and sorting options.
+    Использует возможности полнотекстового поиска PostgreSQL для поля 'query'
+    и предоставляет расширенные возможности фильтрации и сортировки.
 
     Args:
-        db: The SQLAlchemy session.
-        page: The page number to retrieve.
-        per_page: The number of items per page.
-        query: The text for full-text search.
-        location: The location to filter by.
-        company: The company name to filter by.
-        salary_min: The minimum salary to filter by.
-        salary_max: The maximum salary to filter by.
-        source: The vacancy source to filter by.
-        sort_by: The field to sort by ('published_at' or 'salary').
-        sort_order: The sort direction ('asc' or 'desc').
+        db: Сессия SQLAlchemy.
+        page: Номер страницы (начинается с 1).
+        per_page: Количество элементов на странице.
+        query: Текст для полнотекстового поиска.
+        location: Фильтр по местоположению.
+        company: Фильтр по названию компании.
+        salary_min: Минимальная зарплата для фильтрации.
+        salary_max: Максимальная зарплата для фильтрации.
+        source: Фильтр по источнику вакансии.
+        sort_by: Поле для сортировки ('published_at' или 'salary').
+        sort_order: Направление сортировки ('asc' или 'desc').
 
     Returns:
-        A list of Vacancy ORM objects.
+        Список ORM-объектов Vacancy.
     """
     stmt = select(Vacancy)
     filters: list[ColumnElement[bool]] = []
@@ -153,19 +157,19 @@ def get_total_vacancies_count(
     salary_max: Optional[int] = None,
     source: Optional[str] = None,
 ) -> int:
-    """Return the total number of vacancies matching the given filters.
+    """Возвращает общее количество вакансий, соответствующих заданным фильтрам.
 
     Args:
-        db: The SQLAlchemy session.
-        query: The text for full-text search.
-        location: The location to filter by.
-        company: The company name to filter by.
-        salary_min: The minimum salary to filter by.
-        salary_max: The maximum salary to filter by.
-        source: The vacancy source to filter by.
+        db: Сессия SQLAlchemy.
+        query: Текст для полнотекстового поиска.
+        location: Фильтр по местоположению.
+        company: Фильтр по названию компании.
+        salary_min: Минимальная зарплата для фильтрации.
+        salary_max: Максимальная зарплата для фильтрации.
+        source: Фильтр по источнику вакансии.
 
     Returns:
-        The total count of matching vacancies.
+        Общее количество подходящих вакансий.
     """
     stmt = select(func.count()).select_from(Vacancy)
     filters: list[ColumnElement[bool]] = []
@@ -196,14 +200,28 @@ def get_total_vacancies_count(
 
 
 def get_unique_sources(db: Session) -> List[str]:
-    """Return a list of unique vacancy sources."""
+    """Возвращает список уникальных источников вакансий.
+
+    Args:
+        db: Сессия SQLAlchemy.
+
+    Returns:
+        Список строк с названиями источников.
+    """
     stmt = select(Vacancy.source).distinct().order_by(Vacancy.source)
     result = db.execute(stmt)
     return list(result.scalars().all())
 
 
 def get_unique_cities(db: Session) -> List[str]:
-    """Return a list of unique cities from vacancies."""
+    """Возвращает список уникальных городов из вакансий.
+
+    Args:
+        db: Сессия SQLAlchemy.
+
+    Returns:
+        Отсортированный список уникальных названий городов.
+    """
     stmt = (
         select(Vacancy.location)
         .distinct()

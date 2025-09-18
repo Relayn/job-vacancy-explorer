@@ -1,4 +1,4 @@
-"""Main entry point for running the Flask development server."""
+"""Точка входа для запуска dev-сервера Flask."""
 
 import os
 

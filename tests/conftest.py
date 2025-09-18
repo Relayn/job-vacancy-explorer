@@ -6,6 +6,8 @@ from typing import Any, Generator
 
 # --- Импорты сторонних библиотек ---
 import pytest
+from flask import Flask
+from flask.testing import FlaskClient
 from sqlalchemy import create_engine
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.compiler import compiles
@@ -19,6 +21,7 @@ if project_root not in sys.path:
 
 
 # --- Импорты локальных модулей приложения ---
+from app import create_app  # noqa: E402
 from core.config import settings  # noqa: E402
 from core.models import Base  # noqa: E402
 
@@ -32,16 +35,17 @@ def compile_tsvector_for_sqlite(
     return "TEXT"
 
 
-@pytest.fixture(scope="function")  # type: ignore[misc]
-def setup_test_db() -> Generator[None, None, None]:
+@pytest.fixture(scope="function")
+def setup_test_db() -> Generator[Any, None, None]:
     """Фикстура для unit-тестов, зависящих от БД.
 
     Создает таблицы в тестовой БД (SQLite) перед тестом и удаляет их после.
+    Возвращает engine для использования в других фикстурах.
     """
     if not settings.TEST_DATABASE_URL:
         pytest.fail(
             (
-                "TEST_DATABASE_URL is not set. Ensure it's passed via -e flag "
+                "TEST_DATABASE_URL is not set. Ensure it's passed via .env.test "
                 "for unit tests."
             )
         )
@@ -50,5 +54,24 @@ def setup_test_db() -> Generator[None, None, None]:
     assert settings.TEST_DATABASE_URL is not None
     engine = create_engine(settings.TEST_DATABASE_URL)
     Base.metadata.create_all(bind=engine)
-    yield
+    yield engine  # Возвращаем engine
     Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture(scope="module")
+def app() -> Generator[Flask, None, None]:
+    """Фикстура для создания экземпляра приложения Flask для тестов."""
+    _app = create_app()
+    _app.config.update(
+        {
+            "TESTING": True,
+            "SECRET_KEY": "test_secret_key",  # Устанавливаем ключ для тестов
+        }
+    )
+    yield _app
+
+
+@pytest.fixture(scope="module")
+def client(app: Flask) -> FlaskClient:
+    """Фикстура, предоставляющая тестовый клиент Flask."""
+    return app.test_client()
