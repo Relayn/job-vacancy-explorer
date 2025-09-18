@@ -1,4 +1,4 @@
-"""Tests for the HHParser."""
+"""Тесты для HHParser."""
 
 from datetime import datetime
 from typing import Any, Dict, Generator
@@ -42,7 +42,7 @@ MOCK_API_RESPONSE: Dict[str, Any] = {
 }
 
 
-@pytest.fixture  # type: ignore[misc]
+@pytest.fixture
 def mock_requests_get() -> Generator[Mock, None, None]:
     """Фикстура для мокирования requests.get."""
     with patch("requests.Session.get") as mock_get:
@@ -55,13 +55,13 @@ def mock_requests_get() -> Generator[Mock, None, None]:
 
 def test_hh_parser_success(mock_requests_get: Mock) -> None:
     """Тест успешного парсинга вакансий."""
-    # Arrange
+    # Подготовка
     parser = HHParser()
 
-    # Act
+    # Действие
     vacancies = parser.parse(search_query="Python")
 
-    # Assert
+    # Проверка
     mock_requests_get.assert_called_once()
     assert len(vacancies) == 2
     assert all(isinstance(v, VacancyDTO) for v in vacancies)
@@ -114,7 +114,7 @@ def test_hh_parser_malformed_item(mock_requests_get: Mock) -> None:
     # Act
     vacancies = parser.parse(search_query="Python")
 
-    # Assert
+    # Проверка
     # Парсер должен пропустить сломанную вакансию и вернуть только валидную
     assert len(vacancies) == 1
     assert vacancies[0].title == "Python Developer"

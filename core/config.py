@@ -1,4 +1,4 @@
-"""Application configuration settings."""
+"""Настройки конфигурации приложения."""
 
 import json
 from typing import Dict, List, Optional
@@ -8,12 +8,12 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    """Manage application settings.
+    """Управление настройками приложения.
 
-    Loads variables from an .env file.
+    Загружает переменные из файла .env.
     """
 
-    # Настройки базы данных PostgreSQL (теперь опциональные)
+    # Настройки подключения к PostgreSQL (все поля опциональны)
     DB_HOST: Optional[str] = None
     DB_PORT: Optional[int] = None
     DB_USER: Optional[str] = None
@@ -39,13 +39,13 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_db_settings(self) -> "Settings":
-        """Validate that if not using a test DB, all main DB settings are present.
+        """Проверяет, что при отсутствии тестовой БД указаны все основные настройки.
 
         Returns:
-            The validated Settings instance.
+            Валидированный экземпляр настроек.
 
         Raises:
-            ValueError: If required database settings are missing.
+            ValueError: Если отсутствуют обязательные настройки БД.
         """
         if self.TEST_DATABASE_URL:
             # Если используется тестовая БД, остальные проверки не нужны
@@ -67,13 +67,13 @@ class Settings(BaseSettings):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def database_url(self) -> str:
-        """Return the SQLAlchemy database URL.
+        """Возвращает URL для подключения к базе данных SQLAlchemy.
 
-        Uses the 'psycopg' dialect for psycopg v3. If TEST_DATABASE_URL is
-        set, it will be used instead.
+        Использует диалект 'psycopg' для psycopg v3. Если задан TEST_DATABASE_URL,
+        будет использовано его значение.
 
         Returns:
-            The database connection URL string.
+            Строка подключения к базе данных.
         """
         if self.TEST_DATABASE_URL:
             return self.TEST_DATABASE_URL
@@ -92,12 +92,12 @@ class Settings(BaseSettings):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def proxy_list_as_array(self) -> List[str]:
-        """Return a list of proxies from the PROXY_LIST string.
+        """Возвращает список прокси из строки PROXY_LIST.
 
-        Handles empty values and extra whitespace.
+        Обрабатывает пустые значения и лишние пробелы.
 
         Returns:
-            A list of proxy URLs.
+            Список URL-адресов прокси-серверов.
         """
         if not self.PROXY_LIST:
             return []
@@ -106,12 +106,12 @@ class Settings(BaseSettings):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def currency_rates(self) -> Dict[str, float]:
-        """Parse the CURRENCY_RATES_JSON string into a dictionary.
+        """Преобразует строку CURRENCY_RATES_JSON в словарь.
 
-        Returns a default dictionary in case of a parsing error.
+        В случае ошибки парсинга возвращает словарь с значениями по умолчанию.
 
         Returns:
-            A dictionary of currency rates.
+            Словарь с курсами валют.
         """
         try:
             rates = json.loads(self.CURRENCY_RATES_JSON)
@@ -131,5 +131,5 @@ class Settings(BaseSettings):
             }
 
 
-# Создаем единственный экземпляр настроек для всего приложения
+# Создаем глобальный экземпляр настроек для всего приложения
 settings = Settings()

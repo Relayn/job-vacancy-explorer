@@ -9,7 +9,8 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
 # Устанавливаем системные зависимости, необходимые для сборки некоторых пакетов
-RUN apt-get update && apt-get install -y build-essential
+# Этот слой будет кэширован и редко будет меняться
+RUN apt-get update && apt-get install -y build-essential && rm -rf /var/lib/apt/lists/*
 
 # Устанавливаем Poetry
 RUN pip install poetry
@@ -21,24 +22,22 @@ RUN poetry config virtualenvs.create false
 # Этап 2: Установка зависимостей
 FROM base AS builder
 
-# Копируем файлы для установки зависимостей
+# Копируем ТОЛЬКО файлы зависимостей
 COPY pyproject.toml poetry.lock* ./
 
-# Устанавливаем все зависимости, включая dev, для тестирования и линтинга
-# --no-interaction и --no-ansi для чистого вывода в логах
-RUN poetry install --no-interaction --no-ansi
+# Устанавливаем зависимости. Этот слой будет пересобираться только при изменении poetry.lock
+RUN poetry install --no-interaction --no-ansi --no-root
+
 
 # Этап 3: Финальный образ
 FROM base
 
 # Копируем установленные зависимости из builder
-# 1. Копируем библиотеки
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-# 2. Копируем исполняемые файлы (gunicorn, alembic, etc.)
 COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder /app /app
 
-# Копируем исходный код приложения
+# Копируем исходный код приложения ПОСЛЕ установки зависимостей
 COPY . .
 
 # Открываем порт, на котором будет работать Gunicorn

@@ -1,4 +1,4 @@
-"""Tests for the scheduler module."""
+"""Тесты для модуля планировщика."""
 
 from datetime import datetime
 from unittest.mock import Mock, patch
@@ -12,14 +12,14 @@ from parsers.dto import VacancyDTO
 @patch("core.scheduler.SuperJobParser")
 @patch("core.scheduler.HHParser")
 def test_update_vacancies_success(
-    MockHHParser: Mock,
-    MockSuperJobParser: Mock,
+    mock_hh_parser: Mock,
+    mock_superjob_parser: Mock,
     mock_add_vacancies: Mock,
     mock_get_db: Mock,
 ) -> None:
     """Тест успешного выполнения задачи обновления вакансий."""
     # 1. Настраиваем мок парсера
-    mock_parser_instance = MockHHParser.return_value
+    mock_parser_instance = mock_hh_parser.return_value
     mock_dto_list = [
         VacancyDTO(
             title="Test Vacancy",
@@ -37,7 +37,7 @@ def test_update_vacancies_success(
     mock_parser_instance.parse.return_value = mock_dto_list
 
     # Настраиваем мок для SuperJobParser, чтобы он возвращал пустой список
-    mock_superjob_instance = MockSuperJobParser.return_value
+    mock_superjob_instance = mock_superjob_parser.return_value
     mock_superjob_instance.parse.return_value = []
 
     # 2. Настраиваем мок функции добавления в БД
@@ -52,7 +52,7 @@ def test_update_vacancies_success(
 
     # Assert
     # Проверяем, что парсер был создан и вызван
-    MockHHParser.assert_called_once()
+    mock_hh_parser.assert_called_once()
     mock_parser_instance.parse.assert_called_once_with("Python")
 
     # Проверяем, что была запрошена сессия БД
@@ -67,24 +67,23 @@ def test_update_vacancies_success(
 @patch("core.scheduler.SuperJobParser")
 @patch("core.scheduler.HHParser")
 def test_update_vacancies_no_vacancies_found(
-    MockHHParser: Mock,
-    MockSuperJobParser: Mock,
+    mock_hh_parser: Mock,
+    mock_superjob_parser: Mock,
     mock_add_vacancies: Mock,
     mock_get_db: Mock,
-    setup_test_db: None,
 ) -> None:
     """Тест сценария, когда парсер не нашел ни одной вакансии."""
     # Парсеры возвращают пустые списки
-    MockHHParser.return_value.parse.return_value = []
-    MockSuperJobParser.return_value.parse.return_value = []
+    mock_hh_parser.return_value.parse.return_value = []
+    mock_superjob_parser.return_value.parse.return_value = []
 
     # Act
     update_vacancies(search_query="ExoticLanguage")
 
     # Assert
     # Парсеры были вызваны
-    MockHHParser.return_value.parse.assert_called_once_with("ExoticLanguage")
-    MockSuperJobParser.return_value.parse.assert_called_once_with("ExoticLanguage")
+    mock_hh_parser.return_value.parse.assert_called_once_with("ExoticLanguage")
+    mock_superjob_parser.return_value.parse.assert_called_once_with("ExoticLanguage")
 
     # А вот функции для работы с БД - нет, так как список вакансий пуст
     mock_get_db.assert_not_called()
