@@ -4,7 +4,7 @@
 """
 
 from contextlib import contextmanager
-from typing import Generator, List, Optional
+from typing import Any, Generator, List, Optional
 
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.dialects.postgresql import insert
@@ -230,3 +230,57 @@ def get_unique_cities(db: Session) -> List[str]:
     )
     result = db.execute(stmt)
     return list(result.scalars().all())
+
+
+def get_top_companies_by_vacancies(
+    db: Session, limit: int = 10
+) -> list[tuple[str, int]]:
+    """Возвращает топ компаний по количеству опубликованных вакансий.
+
+    Args:
+        db: Сессия SQLAlchemy.
+        limit: Количество компаний для возврата.
+
+    Returns:
+        Список кортежей, где каждый кортеж содержит
+        (название_компании, количество_вакансий).
+    """
+    stmt = (
+        select(Vacancy.company, func.count(Vacancy.id).label("vacancy_count"))
+        .group_by(Vacancy.company)
+        .order_by(func.count(Vacancy.id).desc())
+        .limit(limit)
+    )
+    result = db.execute(stmt)
+    return [tuple(row) for row in result]
+
+
+def get_average_salary_by_city(db: Session, limit: int = 10) -> list[dict[str, Any]]:
+    """Рассчитывает среднюю зарплату и количество вакансий по городам.
+
+    Учитываются только вакансии с указанной минимальной зарплатой.
+    Результаты сортируются по количеству вакансий в городе.
+
+    Args:
+        db: Сессия SQLAlchemy.
+        limit: Количество городов для возврата.
+
+    Returns:
+        Список словарей, каждый из которых содержит 'location', 'avg_min_salary',
+        'avg_max_salary' и 'vacancy_count'.
+    """
+    stmt = (
+        select(
+            Vacancy.location,
+            func.round(func.avg(Vacancy.salary_min_rub)).label("avg_min_salary"),
+            func.round(func.avg(Vacancy.salary_max_rub)).label("avg_max_salary"),
+            func.count(Vacancy.id).label("vacancy_count"),
+        )
+        .where(Vacancy.salary_min_rub.isnot(None))
+        .group_by(Vacancy.location)
+        .order_by(func.count(Vacancy.id).desc())
+        .limit(limit)
+    )
+    result = db.execute(stmt)
+    # Преобразуем результат в список словарей для удобства
+    return [dict(row) for row in result.mappings()]

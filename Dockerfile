@@ -1,5 +1,30 @@
-# Этап 1: Базовый образ с Python
-FROM python:3.11-slim AS base
+# Этап 1: Builder - сборка зависимостей
+FROM python:3.11-slim AS builder
+
+# Устанавливаем переменные окружения для Poetry
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+ENV POETRY_NO_INTERACTION=1
+ENV POETRY_VIRTUALENVS_CREATE=false
+ENV POETRY_HOME="/opt/poetry"
+ENV PATH="$POETRY_HOME/bin:$PATH"
+
+# Устанавливаем системные зависимости, необходимые для сборки, и сам Poetry
+# Используем curl для установки Poetry, как рекомендовано официально
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential curl \
+    && rm -rf /var/lib/apt/lists/*
+RUN curl -sSL https://install.python-poetry.org | python3 -
+
+# Устанавливаем рабочую директорию
+WORKDIR /app
+
+# Копируем файлы зависимостей и устанавливаем ТОЛЬКО production-зависимости
+COPY pyproject.toml poetry.lock ./
+RUN poetry install --no-root --only main
+
+# Этап 2: Production - финальный, легковесный образ
+FROM python:3.11-slim AS production-image
 
 # Устанавливаем рабочую директорию
 WORKDIR /app
@@ -8,40 +33,25 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-# Устанавливаем системные зависимости, необходимые для сборки некоторых пакетов
-# Этот слой будет кэширован и редко будет меняться
-RUN apt-get update && apt-get install -y build-essential && rm -rf /var/lib/apt/lists/*
+# Создаем пользователя с ограниченными правами для запуска приложения
+# Это ключевая практика безопасности
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 
-# Устанавливаем Poetry
-RUN pip install poetry
-
-# Конфигурируем Poetry, чтобы он не создавал venv внутри проекта
-RUN poetry config virtualenvs.create false
-
-
-# Этап 2: Установка зависимостей
-FROM base AS builder
-
-# Копируем ТОЛЬКО файлы зависимостей
-COPY pyproject.toml poetry.lock* ./
-
-# Устанавливаем зависимости. Этот слой будет пересобираться только при изменении poetry.lock
-RUN poetry install --no-interaction --no-ansi --no-root
-
-
-# Этап 3: Финальный образ
-FROM base
-
-# Копируем установленные зависимости из builder
+# Копируем установленные зависимости из builder'а
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
-COPY --from=builder /app /app
 
-# Копируем исходный код приложения ПОСЛЕ установки зависимостей
+# Копируем исходный код приложения
+# .dockerignore гарантирует, что лишние файлы не попадут в образ
 COPY . .
+
+# Меняем владельца файлов на нашего пользователя
+RUN chown -R appuser:appgroup /app
+
+# Переключаемся на пользователя с ограниченными правами
+USER appuser
 
 # Открываем порт, на котором будет работать Gunicorn
 EXPOSE 8000
 
-# Команда для запуска приложения через Gunicorn
+# Команда для запуска приложения
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--preload", "run:app"]

@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <h2 class="text-center my-4">Аналитика по вакансиям</h2>
+
+    <div class="row g-4">
+        <!-- Блок: Топ компаний -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-building me-2"></i>Топ-10 компаний по количеству вакансий</h5>
+                </div>
+                <div class="card-body">
+                    {% if top_companies %}
+                    <canvas id="topCompaniesChart"></canvas>
+                    {% else %}
+                    <p class="text-muted">Данных для построения графика нет.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Блок: Средняя зарплата по городам -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-city me-2"></i>Средняя зарплата по городам (Топ-10)</h5>
+                </div>
+                <div class="card-body">
+                    {% if salary_by_city %}
+                    <canvas id="salaryByCityChart"></canvas>
+                    {% else %}
+                    <p class="text-muted">Данных для построения графика нет.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<!-- Подключение Chart.js с CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"
+    integrity="sha512-CQBWl4fJHWvTMpbI2eG9chZbWhTZTYKeHoCImivYoBweOrbQmr/bccfdOoNjxUHhHwHUjOyGIBpdjN1aRIV1ZA=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // --- Безопасная передача данных из Flask в JavaScript ---
+        const topCompaniesData = {{ top_companies | tojson }};
+        const salaryByCityData = {{ salary_by_city | tojson }};
+
+        // --- График 1: Топ компаний (Вертикальный Bar Chart) ---
+        if (topCompaniesData && topCompaniesData.length > 0) {
+            const companyLabels = topCompaniesData.map(item => item[0]);
+            const companyCounts = topCompaniesData.map(item => item[1]);
+
+            const ctxCompanies = document.getElementById('topCompaniesChart');
+            if (ctxCompanies) {
+                new Chart(ctxCompanies, {
+                    type: 'bar',
+                    data: {
+                        labels: companyLabels,
+                        datasets: [{
+                            label: 'Количество вакансий',
+                            data: companyCounts,
+                            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { display: false },
+                            title: { display: true, text: 'Компании с наибольшим числом вакансий' }
+                        },
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
+            }
+        }
+
+        // --- График 2: Зарплаты по городам (Горизонтальный Bar Chart) ---
+        if (salaryByCityData && salaryByCityData.length > 0) {
+            const cityLabels = salaryByCityData.map(item => item.location);
+            const avgMinSalaries = salaryByCityData.map(item => item.avg_min_salary);
+            const avgMaxSalaries = salaryByCityData.map(item => item.avg_max_salary);
+
+            const ctxSalaries = document.getElementById('salaryByCityChart');
+            if (ctxSalaries) {
+                new Chart(ctxSalaries, {
+                    type: 'bar',
+                    data: {
+                        labels: cityLabels,
+                        datasets: [
+                            {
+                                label: 'Средняя мин. з/п (руб)',
+                                data: avgMinSalaries,
+                                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Средняя макс. з/п (руб)',
+                                data: avgMaxSalaries,
+                                backgroundColor: 'rgba(255, 159, 64, 0.6)',
+                                borderColor: 'rgba(255, 159, 64, 1)',
+                                borderWidth: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        indexAxis: 'y', // Делает график горизонтальным
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'top' },
+                            title: { display: true, text: 'Средний уровень зарплат по городам' }
+                        }
+                    }
+                });
+            }
+        }
+    });
+</script>
+{% endblock %}

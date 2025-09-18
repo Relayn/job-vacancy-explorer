@@ -75,8 +75,8 @@ exclude = ["alembic/"]
 source = ["app", "core", "parsers"]
 
 [tool.coverage.report]
-# Тесты будут падать, если покрытие ниже 90%
-fail_under = 88
+# Тесты будут падать, если покрытие ниже 89%
+fail_under = 89
 
 [tool.bandit]
 # Исключаем проверку на использование assert (B101),
