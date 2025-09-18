@@ -7,7 +7,7 @@ from core.config import settings
 from core.database import get_db
 
 
-@pytest.mark.integration  # type: ignore[misc]
+@pytest.mark.integration
 def test_postgres_connection() -> None:
     """Проверяет, что приложение может подключиться к PostgreSQL.
 

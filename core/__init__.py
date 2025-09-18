@@ -1,1 +1,1 @@
-"""Core application package."""
+"""Базовый пакет приложения (core)."""

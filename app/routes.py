@@ -1,4 +1,4 @@
-"""This module defines the main routes for the Flask application."""
+"""Этот модуль определяет основные маршруты для Flask-приложения."""
 
 import logging
 from datetime import datetime
@@ -7,7 +7,6 @@ from typing import Any
 
 from flask import (
     Blueprint,
-    Response,
     flash,
     redirect,
     render_template,
@@ -29,9 +28,13 @@ bp = Blueprint("main", __name__)
 logger = logging.getLogger(__name__)
 
 
-@bp.route("/")  # type: ignore[misc]
+@bp.route("/")
 def index() -> Any:
-    """Отображает главную страницу со статистикой."""
+    """Отображает главную страницу со статистикой.
+
+    Returns:
+        Ответ с отрендеренным шаблоном главной страницы.
+    """
     with get_db() as db:
         stats: dict[str, Any] = {
             "total_vacancies": get_total_vacancies_count(db),
@@ -41,9 +44,15 @@ def index() -> Any:
     return render_template("index.html", stats=stats)
 
 
-@bp.route("/vacancies")  # type: ignore[misc]
+@bp.route("/vacancies")
 def vacancies() -> Any:
-    """Отображает страницу с вакансиями, фильтрами и пагинацией."""
+    """Отображает страницу с вакансиями, фильтрами и пагинацией.
+
+    Поддерживает фильтрацию по запросу, местоположению, компании, зарплате и источнику.
+
+    Returns:
+        Ответ с отрендеренным шаблоном страницы вакансий.
+    """
     error_message = None
     try:
         query = request.args.get("query", type=str)
@@ -114,9 +123,13 @@ def vacancies() -> Any:
     )
 
 
-@bp.route("/trigger-parse", methods=["POST"])  # type: ignore[misc]
-def trigger_parse() -> Response:
-    """Запускает задачу парсинга в фоновом режиме."""
+@bp.route("/trigger-parse", methods=["POST"])
+def trigger_parse() -> Any:
+    """Запускает фоновую задачу парсинга вакансий.
+
+    Returns:
+        Редирект на страницу со списком вакансий после запуска задачи.
+    """
     query = request.form.get("query", "Python")
     if not query:
         query = "Python"  # Запрос по умолчанию
