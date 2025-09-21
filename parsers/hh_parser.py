@@ -35,59 +35,68 @@ class HHParser(BaseParser):
     def _format_salary_string(
         self, salary_data: Optional[Dict[str, Any]]
     ) -> Optional[str]:
-        """Форматирует данные о зарплате в единую строку для передачи в DTO.
-
-        Пример: "от 100000 до 150000 RUR".
-        """
+        """Форматирует данные о зарплате в единую строку для отображения."""
         if not salary_data:
             return None
-
         salary_from = salary_data.get("from")
         salary_to = salary_data.get("to")
         currency = salary_data.get("currency", "RUR").upper()
-
         parts = []
         if salary_from:
             parts.append(f"от {salary_from}")
         if salary_to:
             parts.append(f"до {salary_to}")
-
         return " ".join(parts) + f" {currency}" if parts else None
 
     def _get_description_from_snippet(self, item: Dict[str, Any]) -> str:
         """Получает описание вакансии из полей snippet."""
         snippet = item.get("snippet", {})
-        requirement = snippet.get("requirement", "") or ""
-        responsibility = snippet.get("responsibility", "") or ""
-        # Удаляем HTML-теги подсветки
-        requirement = requirement.replace("<highlighttext>", "").replace(
-            "</highlighttext>", ""
+        requirement = (
+            (snippet.get("requirement") or "")
+            .replace("<highlighttext>", "")
+            .replace("</highlighttext>", "")
         )
-        responsibility = responsibility.replace("<highlighttext>", "").replace(
-            "</highlighttext>", ""
+        responsibility = (
+            (snippet.get("responsibility") or "")
+            .replace("<highlighttext>", "")
+            .replace("</highlighttext>", "")
         )
         return f"{requirement}\n{responsibility}".strip()
 
+    def _parse_api_item(self, item: Dict[str, Any]) -> Optional[VacancyDTO]:
+        """Парсит один элемент из ответа API в VacancyDTO с защитой от ошибок."""
+        try:
+            # Безопасный доступ к вложенным данным с помощью .get()
+            employer = item.get("employer") or {}
+            area = item.get("area") or {}
+            salary_data = item.get("salary")
+
+            return VacancyDTO(
+                title=item["name"],  # Название - единственное обязательное поле
+                company=employer.get("name", "Компания не указана"),
+                location=area.get("name", "Местоположение не указано"),
+                salary=self._format_salary_string(salary_data),
+                description=self._get_description_from_snippet(item),
+                published_at=datetime.fromisoformat(item["published_at"]),
+                source="hh.ru",
+                original_url=item["alternate_url"],
+                salary_min_rub=salary_data.get("from") if salary_data else None,
+                salary_max_rub=salary_data.get("to") if salary_data else None,
+            )
+        except (KeyError, ValueError) as e:
+            # Сработает, только если нет ключевых полей (name, url и т.д.)
+            logger.warning(
+                "Пропущена вакансия %s из-за отсутствия ключевых полей: %s",
+                item.get("id"),
+                e,
+            )
+            return None
+
     def parse(self, search_query: str, area: int = 1) -> List[VacancyDTO]:
-        """Основной метод парсинга вакансий с hh.ru.
-
-        Args:
-            search_query: Поисковый запрос.
-            area: ID региона (1 - Москва).
-
-        Returns:
-            Список объектов VacancyDTO.
-        """
+        """Основной метод парсинга вакансий с hh.ru."""
         vacancies_dto = []
-        params: Dict[str, Any] = {
-            "text": search_query,
-            "area": area,
-            "per_page": 50,
-            "page": 0,
-        }
-
+        params: Dict[str, Any] = {"text": search_query, "area": area, "per_page": 50}
         logger.info("Начало парсинга hh.ru по запросу: '%s'", search_query)
-
         page = 0
         while True:
             params["page"] = page
@@ -98,38 +107,16 @@ class HHParser(BaseParser):
             except requests.RequestException as e:
                 logger.error("Ошибка запроса к API hh.ru: %s", e)
                 break
-
             items = data.get("items", [])
             if not items:
                 break
-
             for item in items:
-                try:
-                    salary_str = self._format_salary_string(item.get("salary"))
-                    dto = VacancyDTO(
-                        title=item.get("name", "Без названия"),
-                        company=item.get("employer", {}).get("name", "Не указана"),
-                        location=item.get("area", {}).get("name", "Не указан"),
-                        salary=salary_str,
-                        description=self._get_description_from_snippet(item),
-                        published_at=datetime.fromisoformat(item["published_at"]),
-                        source="hh.ru",
-                        original_url=item["alternate_url"],
-                    )
+                dto = self._parse_api_item(item)
+                if dto:
                     vacancies_dto.append(dto)
-                except (KeyError, ValueError) as e:
-                    logger.warning(
-                        "Пропущена вакансия %s из-за ошибки в данных: %s",
-                        item.get("id"),
-                        e,
-                    )
-
-            total_pages = data.get("pages", 1)
-            if page >= total_pages - 1:
+            if page >= data.get("pages", 1) - 1:
                 break
-
             page += 1
             time.sleep(REQUEST_DELAY)
-
         logger.info("Парсинг hh.ru завершен. Найдено %d вакансий.", len(vacancies_dto))
         return vacancies_dto

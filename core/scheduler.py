@@ -16,11 +16,11 @@ from parsers.superjob_parser import SuperJobParser
 logger = logging.getLogger(__name__)
 
 
-def update_vacancies(search_query: str = "Python") -> None:
+def update_vacancies(search_query: str) -> None:
     """Обновляет вакансии в базе данных, запуская все доступные парсеры.
 
     Args:
-        search_query: Поисковый запрос для сбора вакансий (по умолчанию: "Python").
+        search_query: Поисковый запрос для сбора вакансий.
     """
     logger.info("Запуск задачи обновления вакансий по запросу: '%s'...", search_query)
     parsers = [HHParser, SuperJobParser]
@@ -58,18 +58,20 @@ def update_vacancies(search_query: str = "Python") -> None:
 def start_scheduler() -> None:
     """Добавляет периодическую задачу и запускает планировщик, если он не запущен.
 
-    Интервал выполнения задачи берется из настроек приложения (SCHEDULER_INTERVAL).
+    Интервал и поисковый запрос берутся из настроек приложения.
     """
     if not scheduler.get_job("update_vacancies_job"):
         scheduler.add_job(
             update_vacancies,
             "interval",
             seconds=settings.SCHEDULER_INTERVAL,
+            args=[settings.DEFAULT_PARSE_QUERY],  # Используем настройку
             id="update_vacancies_job",
         )
         print(
             f"[{datetime.now()}] Периодическая задача обновления вакансий добавлена. "
-            f"Интервал: {settings.SCHEDULER_INTERVAL} секунд."
+            f"Запрос: '{settings.DEFAULT_PARSE_QUERY}', "
+            f"интервал: {settings.SCHEDULER_INTERVAL} секунд."
         )
 
     if not scheduler.running:
