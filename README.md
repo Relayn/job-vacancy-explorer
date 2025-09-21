@@ -5,8 +5,8 @@
   <a href="https://github.com/Relayn/job-vacancy-explorer/actions/workflows/ci.yml">
     <img src="https://github.com/Relayn/job-vacancy-explorer/actions/workflows/ci.yml/badge.svg" alt="CI Pipeline">
   </a>
-  <a href="#">
-    <img src="https://img.shields.io/badge/Coverage-90%25-brightgreen" alt="Test Coverage">
+  <a href="https://codecov.io/gh/Relayn/job-vacancy-explorer">
+    <img src="https://codecov.io/gh/Relayn/job-vacancy-explorer/graph/badge.svg" alt="Test Coverage"/>
   </a>
   <a href="#">
     <img src="https://img.shields.io/badge/Ruff-checked-blue" alt="Checked with Ruff">

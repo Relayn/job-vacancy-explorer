@@ -50,8 +50,13 @@ jobs:
       - name: Run unit tests with coverage
         env:
           TEST_DATABASE_URL: "sqlite:///:memory:"
-        # Добавляем флаги для проверки покрытия с порогом 90%
-        run: poetry run pytest --cov --cov-report=term-missing --cov-fail-under=90 -m "not integration"
+        # Генерируем отчет в формате XML для Codecov и используем fail_under из pyproject.toml
+        run: poetry run pytest --cov --cov-report=xml -m "not integration"
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          fail_ci_if_error: true # Пайплайн упадет, если загрузка не удалась
 
   security-and-quality:
     runs-on: ubuntu-latest
