@@ -99,7 +99,7 @@ jobs:
           timeout 30s bash -c 'until docker ps | grep vacancies_db | grep -q "(healthy)"; do sleep 2; done'
 
       - name: Install dev dependencies inside container
-        run: docker compose exec -T app poetry install --with dev
+        run: docker compose exec -T -u root app poetry install --with dev
 
       - name: Run integration tests
         run: docker compose exec -T app pytest -m "integration"
