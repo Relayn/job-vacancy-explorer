@@ -37,33 +37,58 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
-def add_vacancies_from_dto(db: Session, vacancies_dto: List[VacancyDTO]) -> int:
+def add_vacancies_from_dto(db: Session, vacancies_dto: list[VacancyDTO]) -> int:
     """Добавляет список вакансий в базу данных из DTO-объектов.
 
-    Использует специфичное для PostgreSQL выражение ON CONFLICT DO NOTHING
-    для эффективного пропуска дубликатов на основе ограничения
-    уникальности 'original_url'.
+    Использует механизм PostgreSQL "ON CONFLICT DO NOTHING" для атомарного
+    игнорирования дубликатов, фильтрует поля DTO, чтобы они соответствовали
+    модели, и использует RETURNING для точного подсчета вставленных строк.
 
     Args:
         db: Сессия SQLAlchemy.
         vacancies_dto: Список объектов VacancyDTO.
 
     Returns:
-        Количество вставленных вакансий.
+        Количество фактически вставленных вакансий.
     """
     if not vacancies_dto:
         return 0
 
-    values_to_insert = [dto.model_dump() for dto in vacancies_dto]
+    # 1. Получаем множество имен столбцов из ORM-модели Vacancy
+    allowed_keys = {c.name for c in Vacancy.__table__.columns}
 
-    # Используем insert().on_conflict_do_nothing() для эффективной вставки
-    stmt = insert(Vacancy).values(values_to_insert)
-    stmt = stmt.on_conflict_do_nothing(index_elements=["original_url"])
+    # 2. Фильтруем каждый словарь из DTO, оставляя только те ключи,
+    #    которые присутствуют в модели Vacancy.
+    values_to_insert = [
+        {k: v for k, v in dto.model_dump().items() if k in allowed_keys}
+        for dto in vacancies_dto
+    ]
 
-    result = db.execute(stmt)
-    db.commit()
+    # Если после фильтрации не осталось данных, выходим
+    if not values_to_insert:
+        return 0
 
-    return result.rowcount
+    # 3. Создаем statement с ON CONFLICT и RETURNING в одной цепочке
+    stmt = (
+        insert(Vacancy)
+        .values(values_to_insert)
+        .on_conflict_do_nothing(index_elements=["original_url"])
+        .returning(Vacancy.id)
+    )
+
+    try:
+        # 5. Выполняем запрос и получаем результат
+        result = db.execute(stmt)
+        inserted_ids = result.scalars().all()
+        db.commit()
+        # 6. Возвращаем точное количество вставленных ID
+        return len(inserted_ids)
+    except Exception as e:
+        import logging
+
+        logging.critical("DATABASE INSERT FAILED: %s", e, exc_info=True)
+        db.rollback()
+        return 0
 
 
 def get_filtered_vacancies(
@@ -234,7 +259,7 @@ def get_unique_cities(db: Session) -> List[str]:
 
 def get_top_companies_by_vacancies(
     db: Session, limit: int = 10
-) -> list[tuple[str, int]]:
+) -> list[dict[str, Any]]:
     """Возвращает топ компаний по количеству опубликованных вакансий.
 
     Args:
@@ -242,8 +267,8 @@ def get_top_companies_by_vacancies(
         limit: Количество компаний для возврата.
 
     Returns:
-        Список кортежей, где каждый кортеж содержит
-        (название_компании, количество_вакансий).
+        Список словарей, где каждый словарь содержит
+        'company' и 'vacancy_count'.
     """
     stmt = (
         select(Vacancy.company, func.count(Vacancy.id).label("vacancy_count"))
@@ -252,7 +277,7 @@ def get_top_companies_by_vacancies(
         .limit(limit)
     )
     result = db.execute(stmt)
-    return [tuple(row) for row in result]
+    return [dict(row) for row in result.mappings()]
 
 
 def get_average_salary_by_city(db: Session, limit: int = 10) -> list[dict[str, Any]]:

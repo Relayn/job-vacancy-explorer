@@ -38,7 +38,10 @@ ENV PYTHONUNBUFFERED 1
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 
 # Копируем установленные зависимости из builder'а
+# Сначала библиотеки...
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+# ...а теперь исполняемые файлы (gunicorn, alembic и т.д.)
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Копируем исходный код приложения
 # .dockerignore гарантирует, что лишние файлы не попадут в образ
@@ -53,5 +56,5 @@ USER appuser
 # Открываем порт, на котором будет работать Gunicorn
 EXPOSE 8000
 
-# Команда для запуска приложения
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--preload", "run:app"]
+# Команда для запуска приложения: сначала миграции, потом сервер
+CMD ["sh", "-c", "alembic upgrade head && gunicorn --bind 0.0.0.0:8000 run:app"]

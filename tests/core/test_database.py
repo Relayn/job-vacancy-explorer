@@ -241,7 +241,7 @@ def test_get_top_companies_by_vacancies(db_session: Session, populate_db: None) 
     """Тест получения топа компаний по числу вакансий."""
     top_companies = get_top_companies_by_vacancies(db_session)
     assert len(top_companies) == 4
-    assert top_companies[0] == ("Tech Corp", 2)
+    assert top_companies[0] == {"company": "Tech Corp", "vacancy_count": 2}
 
 
 def test_get_average_salary_by_city(db_session: Session, populate_db: None) -> None:
@@ -255,3 +255,24 @@ def test_get_average_salary_by_city(db_session: Session, populate_db: None) -> N
     assert moscow_stats["vacancy_count"] == 3
     # Среднее из (100000, 200000, 120000) = 420000 / 3 = 140000
     assert moscow_stats["avg_min_salary"] == 140000
+
+
+def test_add_vacancies_from_dto_empty_list(db_session: Session) -> None:
+    """Тест, что функция корректно обрабатывает пустой список DTO."""
+    added_count = add_vacancies_from_dto(db_session, [])
+    assert added_count == 0
+    assert db_session.query(Vacancy).count() == 0
+
+
+def test_get_filtered_vacancies_by_source_and_asc_sort(
+    db_session: Session, populate_db: None
+) -> None:
+    """Тест фильтрации по источнику и сортировки по возрастанию."""
+    # Проверка фильтрации по источнику
+    vacancies = get_filtered_vacancies(db_session, source="superjob.ru")
+    assert len(vacancies) == 1
+    assert vacancies[0].company == "Big Blue"
+
+    # Проверка сортировки по дате по возрастанию (самая старая вакансия - первая)
+    vacancies_asc = get_filtered_vacancies(db_session, sort_order="asc")
+    assert vacancies_asc[0].title == "Python Developer"
