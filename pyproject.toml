@@ -21,7 +21,7 @@ alembic = "^1.13.1"
 markupsafe = "^3.0.2"
 tzlocal = "^5.2"
 beautifulsoup4 = "^4.13.4"
-lxml = "^6.0.0"
+lxml = "^6.0.2"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.13.0"
