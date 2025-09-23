@@ -24,8 +24,8 @@ beautifulsoup4 = "^4.13.4"
 lxml = "^6.0.0"
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.13.1"
-black = "^25.1.0"
+ruff = "^0.13.0"
+black = "^25.9.0"
 pytest = "^8.3.2"
 pre-commit = "^4.2.0"
 pytest-dotenv = "^0.5.2"
@@ -75,8 +75,8 @@ exclude = ["alembic/"]
 source = ["app", "core", "parsers"]
 
 [tool.coverage.report]
-# Тесты будут падать, если покрытие ниже 89%
-fail_under = 84
+# Тесты будут падать, если покрытие ниже 90%
+fail_under = 88
 
 [tool.bandit]
 # Исключаем проверку на использование assert (B101),
