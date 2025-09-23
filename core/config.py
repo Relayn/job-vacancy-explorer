@@ -22,6 +22,7 @@ class Settings(BaseSettings):
 
     # Настройки планировщика
     SCHEDULER_INTERVAL: int = 3600
+    DEFAULT_PARSE_QUERY: str = "Python"
 
     # Настройки Flask
     DEBUG: bool = False

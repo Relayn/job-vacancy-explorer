@@ -93,3 +93,28 @@ def test_trigger_parse_route(
         # 3) Он был вызван с правильным поисковым запросом
         _, call_kwargs = mock_add_job.call_args
         assert call_kwargs["args"][0] == "Data Science"
+
+
+def test_health_check_route_ok(client: FlaskClient) -> None:
+    """Тестирует эндпоинт /health на успешный ответ."""
+    # Arrange: Мокируем get_db, чтобы он не вызывал реальную БД, а просто работал
+    with patch("app.routes.get_db"):
+        # Act
+        response = client.get("/health")
+        # Assert
+        assert response.status_code == 200
+        assert response.json == {"status": "ok"}
+
+
+def test_analytics_route(client: FlaskClient) -> None:
+    """Тестирует эндпоинт /analytics."""
+    # Arrange: Мокируем функции, которые обращаются к БД
+    with (
+        patch("app.routes.get_top_companies_by_vacancies", return_value=[]),
+        patch("app.routes.get_average_salary_by_city", return_value=[]),
+    ):
+        # Act
+        response = client.get("/analytics")
+        # Assert
+        assert response.status_code == 200
+        assert "Аналитика по вакансиям".encode("utf-8") in response.data

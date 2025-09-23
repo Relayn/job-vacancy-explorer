@@ -8,15 +8,19 @@ from typing import Any
 from flask import (
     Blueprint,
     flash,
+    jsonify,
     redirect,
     render_template,
     request,
     url_for,
 )
+from sqlalchemy import text
 
 from core.database import (
+    get_average_salary_by_city,
     get_db,
     get_filtered_vacancies,
+    get_top_companies_by_vacancies,
     get_total_vacancies_count,
     get_unique_cities,
     get_unique_sources,
@@ -148,3 +152,42 @@ def trigger_parse() -> Any:
         "success",
     )
     return redirect(url_for("main.vacancies"))
+
+
+@bp.route("/analytics")
+def analytics() -> Any:
+    """Отображает страницу с аналитикой по вакансиям.
+
+    Returns:
+        Ответ с отрендеренным шаблоном страницы аналитики.
+    """
+    with get_db() as db:
+        top_companies = get_top_companies_by_vacancies(db)
+        salary_by_city = get_average_salary_by_city(db)
+
+    return render_template(
+        "analytics.html",
+        top_companies=top_companies,
+        salary_by_city=salary_by_city,
+    )
+
+
+@bp.route("/health")
+def health_check() -> Any:
+    """Проверяет состояние приложения и его зависимостей (БД).
+
+    Returns:
+        JSON-ответ со статусом 'ok' и кодом 200 в случае успеха,
+        или 'error' и кодом 503, если есть проблемы с подключением к БД.
+    """
+    try:
+        with get_db() as db:
+            # Выполняем самый простой и быстрый запрос для проверки подключения
+            db.execute(text("SELECT 1"))
+        return jsonify({"status": "ok"}), 200
+    except Exception as e:
+        logger.error("Health check failed: database connection error: %s", e)
+        return (
+            jsonify({"status": "error", "reason": "database connection failed"}),
+            503,
+        )

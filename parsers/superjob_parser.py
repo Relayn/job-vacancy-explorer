@@ -14,6 +14,7 @@ from requests import Session
 from core.config import settings
 from parsers.base_parser import BaseParser
 from parsers.dto import VacancyDTO
+from parsers.utils import parse_salary_string
 
 # Константы
 SUPERJOB_BASE_URL = "https://russia.superjob.ru"
@@ -84,70 +85,6 @@ class SuperJobParser(BaseParser):
 
         return datetime.now()  # Возврат текущей даты, если формат не распознан
 
-    def _parse_vacancy_card(self, card: Tag) -> Optional[VacancyDTO]:
-        """Извлекает данные из одной карточки вакансии."""
-        try:
-            # Название и URL
-            title_tag = card.select_one('a[href*="/vakansii/"]')
-            if not title_tag:
-                return None  # Пропускаем, если нет основной ссылки
-            href_value = title_tag.get("href")
-            if not isinstance(href_value, str):
-                return None
-            title = title_tag.text.strip()
-            url = urljoin(SUPERJOB_BASE_URL, href_value)
-
-            # Компания
-            company_tag = card.select_one("span.f-test-text-vacancy-item-company-name")
-            company = company_tag.text.strip() if company_tag else "Не указана"
-
-            # Местоположение (ищем span после иконки-пина)
-            location_pin = card.select_one('svg use[href="#pin"]')
-            location = "Не указан"
-
-            if location_pin:
-                parent_div = location_pin.find_parent("div")
-                if isinstance(parent_div, Tag):
-                    location_tag = parent_div.find("span")
-                    if location_tag:
-                        location = location_tag.text.strip()
-
-            # Зарплата
-            salary_tag = card.select_one(".f-test-text-company-item-salary")
-            salary = "По договоренности"
-            if salary_tag:
-                # Заменяем неразрывные пробелы и удаляем лишнее
-                salary = (
-                    salary_tag.text.replace("\xa0", " ").replace("/месяц", "").strip()
-                )
-
-            # Дата публикации
-            date_tag = card.select_one("span._2Q1BH._3doCL._2eclS")
-            published_at = (
-                self._parse_date(date_tag.text) if date_tag else datetime.now()
-            )
-
-            # Описание
-            description_tags = card.select("span._2Q1BH._3doCL._2k8ZM.rtYnN.sPJuZ")
-            description_parts = [
-                tag.get_text(separator=" ", strip=True) for tag in description_tags
-            ]
-            description = "\n".join(description_parts)
-
-            return VacancyDTO(
-                title=title,
-                company=company,
-                location=location,
-                salary=salary,
-                description=description,
-                published_at=published_at,
-                source="superjob.ru",
-                original_url=url,
-            )
-        except (AttributeError, KeyError, ValueError) as e:
-            logger.error("Ошибка при парсинге карточки вакансии: %s", e)
-            return None
-
     def parse(self, search_query: str) -> List[VacancyDTO]:
         """Основной метод парсинга вакансий с superjob.ru."""
         logger.info("Начало парсинга superjob.ru по запросу: '%s'", search_query)
@@ -197,3 +134,60 @@ class SuperJobParser(BaseParser):
             len(vacancies_dto),
         )
         return vacancies_dto
+
+    def _parse_vacancy_card(self, card: Tag) -> Optional[VacancyDTO]:
+        """Извлекает данные из одной карточки вакансии."""
+        try:
+            title_tag = card.select_one('a[href*="/vakansii/"]')
+            if not title_tag:
+                return None
+            href_value = title_tag.get("href")
+            if not isinstance(href_value, str):
+                return None
+            title = title_tag.text.strip()
+            url = urljoin(SUPERJOB_BASE_URL, href_value)
+
+            company_tag = card.select_one("span.f-test-text-vacancy-item-company-name")
+            company = company_tag.text.strip() if company_tag else "Не указана"
+
+            location_pin = card.select_one('svg use[href="#pin"]')
+            location = "Не указан"
+            if location_pin:
+                parent_div = location_pin.find_parent("div")
+                if isinstance(parent_div, Tag):
+                    location_tag = parent_div.find("span")
+                    if location_tag:
+                        location = location_tag.text.strip()
+
+            salary_tag = card.select_one(".f-test-text-company-item-salary")
+            salary_str = salary_tag.text.strip() if salary_tag else "По договоренности"
+
+            date_tag = card.select_one("span._2Q1BH._3doCL._2eclS")
+            published_at = (
+                self._parse_date(date_tag.text) if date_tag else datetime.now()
+            )
+
+            description_tags = card.select("span._2Q1BH._3doCL._2k8ZM.rtYnN.sPJuZ")
+            description = "\n".join(
+                [tag.get_text(separator=" ", strip=True) for tag in description_tags]
+            )
+
+            # --- Новая логика нормализации зарплаты ---
+            salary_min_rub, salary_max_rub = parse_salary_string(salary_str)
+            # -------------------------------------------
+
+            return VacancyDTO(
+                title=title,
+                company=company,
+                location=location,
+                salary=salary_str,
+                description=description,
+                published_at=published_at,
+                source="superjob.ru",
+                original_url=url,
+                salary_min_rub=salary_min_rub,
+                salary_max_rub=salary_max_rub,
+            )
+        except (AttributeError, KeyError, ValueError) as e:
+            logger.error("Ошибка при парсинге карточки вакансии: %s", e)
+            return None

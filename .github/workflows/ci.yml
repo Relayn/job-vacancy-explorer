@@ -50,8 +50,13 @@ jobs:
       - name: Run unit tests with coverage
         env:
           TEST_DATABASE_URL: "sqlite:///:memory:"
-        # Добавляем флаги для проверки покрытия с порогом 90%
-        run: poetry run pytest --cov --cov-report=term-missing --cov-fail-under=90 -m "not integration"
+        # Генерируем отчет в формате XML для Codecov и используем fail_under из pyproject.toml
+        run: poetry run pytest --cov --cov-report=xml -m "not integration"
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          fail_ci_if_error: true # Пайплайн упадет, если загрузка не удалась
 
   security-and-quality:
     runs-on: ubuntu-latest
@@ -78,7 +83,7 @@ jobs:
 
   integration-test:
     runs-on: ubuntu-latest
-    needs: [unit-test, security-and-quality]
+    needs: [ unit-test, security-and-quality ]
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -93,8 +98,11 @@ jobs:
         run: |
           timeout 30s bash -c 'until docker ps | grep vacancies_db | grep -q "(healthy)"; do sleep 2; done'
 
+      - name: Install dev dependencies inside container
+        run: docker compose exec -T -u root app poetry install --with dev
+
       - name: Run integration tests
-        run: docker compose exec -T app poetry run pytest -m "integration"
+        run: docker compose exec -T app pytest -m "integration"
 
       - name: Stop services
         if: always()
