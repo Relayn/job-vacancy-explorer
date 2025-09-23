@@ -25,11 +25,9 @@ services:
       - type: bind
         source: .
         target: /app
-      # Создаем анонимный том для .venv внутри контейнера,
-      # чтобы он не пересекался с локальным .venv.
       - /app/.venv
     ports:
-      - "8076:8000"
+      - "9065:8000"
     env_file:
       - .env
     depends_on:
