@@ -25,14 +25,14 @@ lxml = "^6.0.0"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.13.0"
-black = "^25.1.0"
+black = "^25.9.0"
 pytest = "^8.3.2"
 pre-commit = "^4.2.0"
 pytest-dotenv = "^0.5.2"
-mypy = "^1.18.1"
+mypy = "^1.18.2"
 bandit = "^1.8.6"
 radon = "^6.0.1"
-hypothesis = "^6.139.2"
+hypothesis = "^6.140.2"
 pip-audit = "^2.9.0"
 safety = "^3.6.1"
 pytest-cov = "^7.0.0"
@@ -75,8 +75,8 @@ exclude = ["alembic/"]
 source = ["app", "core", "parsers"]
 
 [tool.coverage.report]
-# Тесты будут падать, если покрытие ниже 89%
-fail_under = 84
+# Тесты будут падать, если покрытие ниже 90%
+fail_under = 88
 
 [tool.bandit]
 # Исключаем проверку на использование assert (B101),
