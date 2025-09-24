@@ -34,7 +34,7 @@ bandit = "^1.8.6"
 radon = "^6.0.1"
 hypothesis = "^6.140.2"
 pip-audit = "^2.9.0"
-safety = "^3.6.1"
+safety = "^3.6.2"
 pytest-cov = "^7.0.0"
 types-requests = "^2.32.4.20250913"
 
