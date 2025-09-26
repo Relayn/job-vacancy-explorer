@@ -24,7 +24,7 @@ beautifulsoup4 = "^4.13.4"
 lxml = "^6.0.2"
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.13.0"
+ruff = "^0.13.2"
 black = "^25.9.0"
 pytest = "^8.3.2"
 pre-commit = "^4.2.0"
