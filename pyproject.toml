@@ -15,7 +15,7 @@ python-dotenv = "^1.0.1"
 gunicorn = "23.0.0"
 psycopg = { version = "^3.1.19", extras = ["binary"] }
 pydantic = "^2.11.9"
-pydantic-settings = "^2.3.4"
+pydantic-settings = "^2.11.0"
 sqlalchemy = "^2.0.31"
 alembic = "^1.13.1"
 markupsafe = "^3.0.2"
