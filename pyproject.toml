@@ -14,7 +14,7 @@ apscheduler = "^3.10.4"
 python-dotenv = "^1.0.1"
 gunicorn = "23.0.0"
 psycopg = { version = "^3.1.19", extras = ["binary"] }
-pydantic = "^2.8.2"
+pydantic = "^2.11.9"
 pydantic-settings = "^2.3.4"
 sqlalchemy = "^2.0.31"
 alembic = "^1.13.1"
